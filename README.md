@@ -30,9 +30,3 @@ The development bundle identifier is `local.xm5control`. Replace it with a globa
 The headphones must be paired and powered on. Only one process can own the Sony RFCOMM channel at a time, so quit other Sony-control utilities while testing.
 
 The active ANC, ambient, preset EQ, and manual EQ curve are device settings and can be read by Sony Sound Connect. Named presets created by XM5 Control are stored locally on the Mac; applying one sends its curve to the headphones, but its custom name is not inserted into Sony's app-private preset library.
-
-## Attribution
-
-The Sony protocol framing and NC/ASM command sequence were adapted from [TheGeekyM/xm5-control](https://github.com/TheGeekyM/xm5-control), licensed under the MIT License. Battery and equalizer command behavior was cross-checked against [AmitRajput-Dev/SonyBridge](https://github.com/AmitRajput-Dev/SonyBridge), also MIT licensed.
-
-The `XM5Hero` artwork is a user-supplied product image with its background isolated for the app. Confirm redistribution rights before publishing binaries or source assets. Sony, WH-1000XM5, and Sound Connect are trademarks of Sony Group Corporation; this project is unofficial and is not affiliated with or endorsed by Sony.
