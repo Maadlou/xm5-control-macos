@@ -14,9 +14,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     #endif
 
     func applicationWillFinishLaunching(_ notification: Notification) {
+        if !isRunningTests,
+           let existing = NSRunningApplication.runningApplications(withBundleIdentifier: Bundle.main.bundleIdentifier ?? "")
+            .first(where: { $0.processIdentifier != ProcessInfo.processInfo.processIdentifier }) {
+            existing.activate()
+            NSApp.terminate(nil)
+            return
+        }
         #if MENU_BAR_APP
         NSApp.setActivationPolicy(.accessory)
         #endif
+    }
+
+    private var isRunningTests: Bool {
+        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil ||
+            CommandLine.arguments.contains("--ui-test-host")
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {

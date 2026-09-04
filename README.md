@@ -17,6 +17,8 @@ A native SwiftUI menu-bar controller for Sony WH-1000XM5 headphones.
 - Includes a live custom EQ editor for Clear Bass and five frequency bands, with reusable personal presets.
 - Provides a permission-free global `⌥⌘A` shortcut to toggle Noise Cancelling and Ambient mode.
 - Supports native launch at login and optional automatic control-link reconnection.
+- Uses capped reconnect backoff, distinguishes Bluetooth audio from Sony control-link availability, and periodically resyncs phone-side changes.
+- Provides copyable connection diagnostics including firmware, protocol channel, last sync, and last error.
 - Uses a transparent user-supplied headphone hero with mode-aware visuals.
 
 ## Development

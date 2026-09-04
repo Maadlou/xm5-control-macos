@@ -1,5 +1,13 @@
 import Foundation
 
+enum ReconnectBackoff {
+    private static let delays: [TimeInterval] = [2, 4, 8, 15, 30]
+
+    static func delay(forAttempt attempt: Int) -> TimeInterval {
+        delays[min(max(0, attempt), delays.count - 1)]
+    }
+}
+
 enum NoiseControlMode: String, CaseIterable, Identifiable, Sendable {
     case off, anc, ambient, wind
 

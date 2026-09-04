@@ -6,7 +6,7 @@ import OSLog
 @MainActor
 final class SonyHeadphonesController: NSObject, ObservableObject {
     enum LinkState: Equatable {
-        case searching, disconnected, opening, handshaking, ready
+        case searching, disconnected, opening, handshaking, ready, controlBusy
         case failed(String)
     }
 
@@ -22,6 +22,11 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
     @Published private(set) var isApplyingChange = false
     @Published private(set) var equalizerPreset: EqualizerPreset?
     @Published private(set) var customEqualizer = EqualizerSettings.flat
+    @Published private(set) var firmwareVersion: String?
+    @Published private(set) var controlChannelID: Int?
+    @Published private(set) var retrySecondsRemaining: Int?
+    @Published private(set) var lastSyncDate: Date?
+    @Published private(set) var lastErrorMessage: String?
 
     var isReady: Bool { linkState == .ready }
     var statusText: String {
@@ -31,8 +36,26 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
         case .opening: "Opening Sony control link…"
         case .handshaking: "Syncing controls…"
         case .ready: "Connected"
+        case .controlBusy: "Control link busy"
         case .failed(let message): message
         }
+    }
+
+    var diagnosticReport: String {
+        [
+            "XM5 Control diagnostics",
+            "Device: \(deviceName)",
+            "Address: \(address.isEmpty ? "Not found" : address)",
+            "Bluetooth audio: \(isDeviceConnected ? "Connected" : "Disconnected")",
+            "Sony control: \(statusText)",
+            "Protocol: MDR v2 / RFCOMM\(controlChannelID.map { " channel \($0)" } ?? "")",
+            "Firmware: \(firmwareVersion ?? "Unknown")",
+            "Battery: \(batteryLevel.map { "\($0)%" } ?? "Unknown")",
+            "Noise control: \(noiseControlMode?.title ?? "Unknown")",
+            "Equalizer: \(equalizerPreset?.title ?? "Unknown")",
+            "Last sync: \(lastSyncDate?.formatted(date: .numeric, time: .standard) ?? "Never")",
+            "Last error: \(lastErrorMessage ?? "None")",
+        ].joined(separator: "\n")
     }
 
     private enum Stage { case idle, protocolInfo, supportFunctions, noiseControl, ready }
@@ -58,11 +81,16 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
     private var asmType: UInt8?
     private var naExtra: [UInt8] = [0, 0]
     private var reconnectAutomatically = true
+    private var isSimulated = false
+    private var retryAttempt = 0
+    private var nextRetryDate: Date?
+    private var syncPollCount = 0
 
     init(startAutomatically: Bool = true, simulatedReady: Bool = false) {
         super.init()
         #if DEBUG
         if simulatedReady {
+            isSimulated = true
             address = "80:99:E7:FB:0A:59"
             isDeviceConnected = true
             linkState = .ready
@@ -70,6 +98,9 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
             ambientLevel = 12
             batteryLevel = 78
             equalizerPreset = .bassBoost
+            firmwareVersion = "2.5.1"
+            controlChannelID = 9
+            lastSyncDate = Date()
             stage = .ready
             asmType = 0x19
             return
@@ -87,15 +118,19 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
 
     func setReconnectAutomatically(_ enabled: Bool) {
         reconnectAutomatically = enabled
+        guard !isSimulated else { return }
         if enabled {
             refresh()
         } else {
             retryWorkItem?.cancel()
             retryWorkItem = nil
+            nextRetryDate = nil
+            retrySecondsRemaining = nil
         }
     }
 
     func refresh() {
+        cancelScheduledRetry(resetAttempts: true)
         refresh(shouldOpenLink: true)
         requestCurrentSettings()
     }
@@ -106,7 +141,14 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
     }
 
     private func poll() {
+        updateRetryCountdown()
         refresh(shouldOpenLink: reconnectAutomatically)
+        guard stage == .ready else { return }
+        syncPollCount += 1
+        if syncPollCount >= 5 {
+            syncPollCount = 0
+            requestCurrentSettings()
+        }
     }
 
     private func requestCurrentSettings() {
@@ -114,11 +156,13 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
         send([0x66, asmType])
         send([0x22, 0x00])
         send([0x56, 0x00])
+        if firmwareVersion == nil { send([0x04, 0x02]) }
     }
 
     private func refresh(shouldOpenLink: Bool) {
         let paired = (IOBluetoothDevice.pairedDevices() as? [IOBluetoothDevice]) ?? []
         guard let match = paired.first(where: { ($0.name ?? "").localizedCaseInsensitiveContains("1000XM5") }) else {
+            closeSonyLink()
             device = nil
             address = ""
             isDeviceConnected = false
@@ -134,10 +178,16 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
             linkState = .disconnected
             return
         }
-        if shouldOpenLink, channel == nil, stage == .idle { openSonyLink() }
+        if shouldOpenLink, channel == nil, stage == .idle {
+            guard nextRetryDate.map({ $0 <= Date() }) ?? true else { return }
+            nextRetryDate = nil
+            retrySecondsRemaining = nil
+            openSonyLink()
+        }
     }
 
     func connect() {
+        cancelScheduledRetry(resetAttempts: true)
         guard let device else {
             refresh()
             return
@@ -255,15 +305,15 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
         let result = device.openRFCOMMChannelAsync(&openedChannel, withChannelID: channelID, delegate: self)
         channel = openedChannel
         guard result == kIOReturnSuccess else {
-            fail("Sony control link failed (\(result))")
+            handleOpenFailure(result)
             return
         }
+        controlChannelID = Int(channelID)
         Self.logger.info("Opening RFCOMM channel \(channelID)")
     }
 
     private func closeSonyLink() {
-        retryWorkItem?.cancel()
-        retryWorkItem = nil
+        cancelScheduledRetry(resetAttempts: true)
         channel?.close()
         channel = nil
         stage = .idle
@@ -273,6 +323,8 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
         isCharging = false
         isApplyingChange = false
         equalizerPreset = nil
+        firmwareVersion = nil
+        controlChannelID = nil
         equalizerWorkItem?.cancel()
         equalizerWorkItem = nil
     }
@@ -336,6 +388,8 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
             parseBattery(payload)
         case (0x57, _), (0x59, _):
             parseEqualizer(payload)
+        case (0x05, _):
+            parseFirmware(payload)
         default:
             break
         }
@@ -369,9 +423,15 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
         commandTimeoutWorkItem = nil
         retryWorkItem?.cancel()
         retryWorkItem = nil
-        Self.logger.info("Sony handshake ready; mode=\(mode.rawValue, privacy: .public)")
+        retryAttempt = 0
+        nextRetryDate = nil
+        retrySecondsRemaining = nil
+        lastErrorMessage = nil
+        lastSyncDate = Date()
+        Self.logger.info("Noise control synced; mode=\(mode.rawValue, privacy: .public)")
         if batteryLevel == nil { send([0x22, 0x00]) }
         if equalizerPreset == nil { send([0x56, 0x00]) }
+        if firmwareVersion == nil { send([0x04, 0x02]) }
     }
 
     private func parseBattery(_ payload: [UInt8]) {
@@ -380,6 +440,7 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
         guard (0...100).contains(level) else { return }
         batteryLevel = level
         isCharging = payload[3] == 0x01
+        lastSyncDate = Date()
         Self.logger.info("Battery ready; level=\(level, privacy: .public)")
     }
 
@@ -389,6 +450,7 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
         if let settings = EqualizerSettings(sonyPayload: payload) {
             customEqualizer = settings
         }
+        lastSyncDate = Date()
         isApplyingChange = false
         commandTimeoutWorkItem?.cancel()
         commandTimeoutWorkItem = nil
@@ -403,19 +465,77 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
         channel = nil
         stage = .idle
         linkState = .failed(message)
+        lastErrorMessage = message
         isApplyingChange = false
+        scheduleRetry()
+    }
+
+    private func handleOpenFailure(_ error: IOReturn) {
+        let message = "Sony control channel is busy (\(error))"
+        Self.logger.error("\(message, privacy: .public)")
+        channel?.close()
+        channel = nil
+        stage = .idle
+        linkState = .controlBusy
+        lastErrorMessage = message
+        scheduleRetry()
+    }
+
+    private func scheduleRetry() {
         retryWorkItem?.cancel()
-        guard reconnectAutomatically else { return }
-        let workItem = DispatchWorkItem { [weak self] in Task { @MainActor in self?.poll() } }
+        guard reconnectAutomatically, isDeviceConnected else {
+            nextRetryDate = nil
+            retrySecondsRemaining = nil
+            return
+        }
+        let delay = ReconnectBackoff.delay(forAttempt: retryAttempt)
+        retryAttempt += 1
+        nextRetryDate = Date().addingTimeInterval(delay)
+        retrySecondsRemaining = Int(delay.rounded(.up))
+        let workItem = DispatchWorkItem { [weak self] in
+            Task { @MainActor in
+                guard let self else { return }
+                self.retryWorkItem = nil
+                self.nextRetryDate = nil
+                self.retrySecondsRemaining = nil
+                self.refresh(shouldOpenLink: true)
+            }
+        }
         retryWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + 5, execute: workItem)
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
+    }
+
+    private func cancelScheduledRetry(resetAttempts: Bool) {
+        retryWorkItem?.cancel()
+        retryWorkItem = nil
+        nextRetryDate = nil
+        retrySecondsRemaining = nil
+        if resetAttempts { retryAttempt = 0 }
+    }
+
+    private func updateRetryCountdown() {
+        guard let nextRetryDate else {
+            retrySecondsRemaining = nil
+            return
+        }
+        retrySecondsRemaining = max(0, Int(nextRetryDate.timeIntervalSinceNow.rounded(.up)))
+    }
+
+    private func parseFirmware(_ payload: [UInt8]) {
+        guard payload.count > 2, payload[1] == 0x02 else { return }
+        let value = String(bytes: payload.dropFirst(2), encoding: .utf8)?
+            .trimmingCharacters(in: .controlCharacters.union(.whitespacesAndNewlines))
+        guard let value, !value.isEmpty else { return }
+        firmwareVersion = value
+        lastSyncDate = Date()
+        Self.logger.info("Firmware ready; version=\(value, privacy: .public)")
     }
 
     @objc nonisolated
     func rfcommChannelOpenComplete(_ rfcommChannel: IOBluetoothRFCOMMChannel, status error: IOReturn) {
         Task { @MainActor in
             guard error == kIOReturnSuccess else {
-                fail("Sony control link failed (\(error))")
+                handleOpenFailure(error)
                 return
             }
             channel = rfcommChannel
@@ -432,10 +552,17 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
     @objc nonisolated
     func rfcommChannelClosed(_ rfcommChannel: IOBluetoothRFCOMMChannel) {
         Task { @MainActor in
+            guard channel === rfcommChannel else { return }
             channel = nil
             stage = .idle
             noiseControlMode = nil
-            linkState = isDeviceConnected ? .failed("Sony control link closed") : .disconnected
+            if isDeviceConnected {
+                linkState = .controlBusy
+                lastErrorMessage = "Sony control link closed while Bluetooth audio remained connected"
+                scheduleRetry()
+            } else {
+                linkState = .disconnected
+            }
         }
     }
 }

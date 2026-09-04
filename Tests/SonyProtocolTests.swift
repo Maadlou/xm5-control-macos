@@ -3,6 +3,10 @@ import XCTest
 @testable import XM5Control
 
 final class SonyProtocolTests: XCTestCase {
+    func testReconnectBackoffCapsAtThirtySeconds() {
+        XCTAssertEqual((0...6).map(ReconnectBackoff.delay), [2, 4, 8, 15, 30, 30, 30])
+    }
+
     func testFrameRoundTripIncludingEscapedBytes() {
         let payload: [UInt8] = [0x68, 0x3C, 0x3D, 0x3E, 0x01]
         let encoded = SonyFrameCodec.encode(type: 0x0C, sequence: 1, payload: payload)

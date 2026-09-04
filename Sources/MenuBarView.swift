@@ -262,7 +262,24 @@ struct MenuBarView: View {
 
     @ViewBuilder
     private var connectionMessage: some View {
-        if case .failed(let message) = headphones.linkState {
+        if headphones.linkState == .controlBusy {
+            VStack(alignment: .leading, spacing: 9) {
+                Label("Bluetooth audio is connected, but Sony control is busy.", systemImage: "arrow.triangle.2.circlepath")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.orange)
+                HStack {
+                    Text(headphones.retrySecondsRemaining.map { "Retrying in \($0)s" } ?? "Waiting to retry")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button("Retry Now") { headphones.refresh() }
+                        .buttonStyle(.borderless)
+                        .font(.system(size: 10, weight: .semibold))
+                }
+            }
+            .padding(11)
+            .background(Color.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        } else if case .failed(let message) = headphones.linkState {
             Label(message, systemImage: "exclamationmark.triangle.fill")
                 .font(.system(size: 11))
                 .foregroundStyle(.orange)
