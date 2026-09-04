@@ -1,0 +1,225 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		100000000000000000000001 /* AppMain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000001 /* AppMain.swift */; };
+		100000000000000000000002 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000002 /* AppDelegate.swift */; };
+		100000000000000000000003 /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000003 /* AppEnvironment.swift */; };
+		100000000000000000000004 /* SettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000004 /* SettingsStore.swift */; };
+		100000000000000000000005 /* MenuBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000005 /* MenuBarController.swift */; };
+		100000000000000000000006 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000006 /* RootView.swift */; };
+		100000000000000000000007 /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000007 /* MenuBarView.swift */; };
+		100000000000000000000008 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000008 /* SettingsView.swift */; };
+		100000000000000000000009 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000009 /* Assets.xcassets */; };
+		10000000000000000000000A /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000A /* Localizable.xcstrings */; };
+		10000000000000000000000B /* SettingsStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000C /* SettingsStoreTests.swift */; };
+		10000000000000000000000C /* AppUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000000D /* AppUITests.swift */; };
+		10000000000000000000000D /* SonyProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000011 /* SonyProtocol.swift */; };
+		10000000000000000000000E /* SonyHeadphonesController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000012 /* SonyHeadphonesController.swift */; };
+		10000000000000000000000F /* SonyProtocolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000013 /* SonyProtocolTests.swift */; };
+		100000000000000000000010 /* GlobalHotKeyController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000014 /* GlobalHotKeyController.swift */; };
+		100000000000000000000011 /* EqualizerEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000015 /* EqualizerEditorView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		900000000000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 600000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 500000000000000000000001;
+			remoteInfo = "XM5 Control";
+		};
+		900000000000000000000002 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 600000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 500000000000000000000001;
+			remoteInfo = "XM5 Control";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		200000000000000000000001 /* AppMain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppMain.swift; sourceTree = "<group>"; };
+		200000000000000000000002 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		200000000000000000000003 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
+		200000000000000000000004 /* SettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsStore.swift; sourceTree = "<group>"; };
+		200000000000000000000005 /* MenuBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarController.swift; sourceTree = "<group>"; };
+		200000000000000000000006 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		200000000000000000000007 /* MenuBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarView.swift; sourceTree = "<group>"; };
+		200000000000000000000008 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		200000000000000000000009 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		20000000000000000000000A /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		20000000000000000000000B /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
+		20000000000000000000000C /* SettingsStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsStoreTests.swift; sourceTree = "<group>"; };
+		20000000000000000000000D /* AppUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppUITests.swift; sourceTree = "<group>"; };
+		20000000000000000000000E /* XM5 Control.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "XM5 Control.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		20000000000000000000000F /* XM5 ControlTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "XM5 ControlTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		200000000000000000000010 /* XM5 ControlUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "XM5 ControlUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		200000000000000000000011 /* SonyProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SonyProtocol.swift; sourceTree = "<group>"; };
+		200000000000000000000012 /* SonyHeadphonesController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SonyHeadphonesController.swift; sourceTree = "<group>"; };
+		200000000000000000000013 /* SonyProtocolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SonyProtocolTests.swift; sourceTree = "<group>"; };
+		200000000000000000000014 /* GlobalHotKeyController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalHotKeyController.swift; sourceTree = "<group>"; };
+		200000000000000000000015 /* EqualizerEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EqualizerEditorView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		400000000000000000000001 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		400000000000000000000002 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		400000000000000000000003 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		300000000000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				300000000000000000000002 /* Sources */,
+				300000000000000000000003 /* Resources */,
+				300000000000000000000004 /* Configuration */,
+				300000000000000000000005 /* Tests */,
+				300000000000000000000006 /* UITests */,
+				300000000000000000000007 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		300000000000000000000002 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				200000000000000000000001 /* AppMain.swift */,
+				200000000000000000000002 /* AppDelegate.swift */,
+				200000000000000000000003 /* AppEnvironment.swift */,
+				200000000000000000000004 /* SettingsStore.swift */,
+				200000000000000000000005 /* MenuBarController.swift */,
+				200000000000000000000006 /* RootView.swift */,
+				200000000000000000000007 /* MenuBarView.swift */,
+				200000000000000000000008 /* SettingsView.swift */,
+				200000000000000000000011 /* SonyProtocol.swift */,
+				200000000000000000000012 /* SonyHeadphonesController.swift */,
+				200000000000000000000014 /* GlobalHotKeyController.swift */,
+				200000000000000000000015 /* EqualizerEditorView.swift */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		300000000000000000000003 /* Resources */ = {
+			isa = PBXGroup;
+			children = (200000000000000000000009 /* Assets.xcassets */, 20000000000000000000000A /* Localizable.xcstrings */);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		300000000000000000000004 /* Configuration */ = {
+			isa = PBXGroup;
+			children = (20000000000000000000000B /* App.entitlements */);
+			path = Configuration;
+			sourceTree = "<group>";
+		};
+		300000000000000000000005 /* Tests */ = {isa = PBXGroup; children = (20000000000000000000000C /* SettingsStoreTests.swift */, 200000000000000000000013 /* SonyProtocolTests.swift */); path = Tests; sourceTree = "<group>"; };
+		300000000000000000000006 /* UITests */ = {isa = PBXGroup; children = (20000000000000000000000D /* AppUITests.swift */); path = UITests; sourceTree = "<group>"; };
+		300000000000000000000007 /* Products */ = {
+			isa = PBXGroup;
+			children = (20000000000000000000000E /* XM5 Control.app */, 20000000000000000000000F /* XM5 ControlTests.xctest */, 200000000000000000000010 /* XM5 ControlUITests.xctest */);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		500000000000000000000001 /* XM5 Control */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 800000000000000000000002;
+			buildPhases = (400000000000000000000004, 400000000000000000000001, 400000000000000000000005);
+			buildRules = ();
+			dependencies = ();
+			name = "XM5 Control";
+			productName = "XM5 Control";
+			productReference = 20000000000000000000000E /* XM5 Control.app */;
+			productType = "com.apple.product-type.application";
+		};
+		500000000000000000000002 /* XM5 ControlTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 800000000000000000000003;
+			buildPhases = (400000000000000000000006, 400000000000000000000002);
+			buildRules = ();
+			dependencies = (A00000000000000000000001);
+			name = "XM5 ControlTests";
+			productName = "XM5 ControlTests";
+			productReference = 20000000000000000000000F /* XM5 ControlTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		500000000000000000000003 /* XM5 ControlUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 800000000000000000000004;
+			buildPhases = (400000000000000000000007, 400000000000000000000003);
+			buildRules = ();
+			dependencies = (A00000000000000000000002);
+			name = "XM5 ControlUITests";
+			productName = "XM5 ControlUITests";
+			productReference = 200000000000000000000010 /* XM5 ControlUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		600000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					500000000000000000000001 = {CreatedOnToolsVersion = 16.0;};
+					500000000000000000000002 = {CreatedOnToolsVersion = 16.0; TestTargetID = 500000000000000000000001;};
+					500000000000000000000003 = {CreatedOnToolsVersion = 16.0; TestTargetID = 500000000000000000000001;};
+				};
+			};
+			buildConfigurationList = 800000000000000000000001;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (en, Base);
+			mainGroup = 300000000000000000000001;
+			productRefGroup = 300000000000000000000007 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (500000000000000000000001 /* XM5 Control */, 500000000000000000000002 /* XM5 ControlTests */, 500000000000000000000003 /* XM5 ControlUITests */);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		400000000000000000000005 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (100000000000000000000009 /* Assets.xcassets in Resources */, 10000000000000000000000A /* Localizable.xcstrings in Resources */); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		400000000000000000000004 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (100000000000000000000001, 100000000000000000000002, 100000000000000000000003, 100000000000000000000004, 100000000000000000000005, 100000000000000000000006, 100000000000000000000007, 100000000000000000000008, 10000000000000000000000D, 10000000000000000000000E, 100000000000000000000010, 100000000000000000000011); runOnlyForDeploymentPostprocessing = 0; };
+		400000000000000000000006 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (10000000000000000000000B, 10000000000000000000000F); runOnlyForDeploymentPostprocessing = 0; };
+		400000000000000000000007 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (10000000000000000000000C); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A00000000000000000000001 = {isa = PBXTargetDependency; target = 500000000000000000000001; targetProxy = 900000000000000000000001; };
+		A00000000000000000000002 = {isa = PBXTargetDependency; target = 500000000000000000000001; targetProxy = 900000000000000000000002; };
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		700000000000000000000001 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ENABLE_MODULES = YES; DEBUG_INFORMATION_FORMAT = dwarf; MACOSX_DEPLOYMENT_TARGET = 14.0; ONLY_ACTIVE_ARCH = YES; SDKROOT = macosx; SWIFT_OPTIMIZATION_LEVEL = "-Onone";}; name = Debug; };
+		700000000000000000000002 /* Release */ = {isa = XCBuildConfiguration; buildSettings = {ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ENABLE_MODULES = YES; DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym"; MACOSX_DEPLOYMENT_TARGET = 14.0; SDKROOT = macosx; SWIFT_COMPILATION_MODE = wholemodule;}; name = Release; };
+		700000000000000000000003 /* App Debug */ = {isa = XCBuildConfiguration; buildSettings = {ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor; CODE_SIGN_ENTITLEMENTS = Configuration/App.entitlements; CODE_SIGN_STYLE = Automatic; COMBINE_HIDPI_IMAGES = YES; CURRENT_PROJECT_VERSION = 1; ENABLE_APP_SANDBOX = YES; ENABLE_HARDENED_RUNTIME = YES; ENABLE_PREVIEWS = YES; ENABLE_TESTABILITY = YES; GENERATE_INFOPLIST_FILE = YES; INFOPLIST_KEY_CFBundleDisplayName = "XM5 Control"; INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities"; INFOPLIST_KEY_LSUIElement = YES; INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "XM5 Control uses Bluetooth to read and change your Sony headphone settings."; MARKETING_VERSION = 0.1.0; PRODUCT_BUNDLE_IDENTIFIER = local.xm5control; PRODUCT_MODULE_NAME = XM5Control; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited) MENU_BAR_APP"; SWIFT_STRICT_CONCURRENCY = complete; SWIFT_VERSION = 6.0;}; name = Debug; };
+		700000000000000000000004 /* App Release */ = {isa = XCBuildConfiguration; buildSettings = {ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor; CODE_SIGN_ENTITLEMENTS = Configuration/App.entitlements; CODE_SIGN_STYLE = Automatic; COMBINE_HIDPI_IMAGES = YES; CURRENT_PROJECT_VERSION = 1; ENABLE_APP_SANDBOX = YES; ENABLE_HARDENED_RUNTIME = YES; GENERATE_INFOPLIST_FILE = YES; INFOPLIST_KEY_CFBundleDisplayName = "XM5 Control"; INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities"; INFOPLIST_KEY_LSUIElement = YES; INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "XM5 Control uses Bluetooth to read and change your Sony headphone settings."; MARKETING_VERSION = 0.1.0; PRODUCT_BUNDLE_IDENTIFIER = local.xm5control; PRODUCT_MODULE_NAME = XM5Control; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) MENU_BAR_APP"; SWIFT_STRICT_CONCURRENCY = complete; SWIFT_VERSION = 6.0;}; name = Release; };
+		700000000000000000000005 /* Tests Debug */ = {isa = XCBuildConfiguration; buildSettings = {BUNDLE_LOADER = "$(TEST_HOST)"; GENERATE_INFOPLIST_FILE = YES; PRODUCT_BUNDLE_IDENTIFIER = "local.xm5control.tests"; PRODUCT_MODULE_NAME = XM5ControlTests; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited) MENU_BAR_APP"; SWIFT_VERSION = 6.0; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/XM5 Control.app/Contents/MacOS/XM5 Control";}; name = Debug; };
+		700000000000000000000006 /* Tests Release */ = {isa = XCBuildConfiguration; buildSettings = {BUNDLE_LOADER = "$(TEST_HOST)"; GENERATE_INFOPLIST_FILE = YES; PRODUCT_BUNDLE_IDENTIFIER = "local.xm5control.tests"; PRODUCT_MODULE_NAME = XM5ControlTests; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) MENU_BAR_APP"; SWIFT_VERSION = 6.0; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/XM5 Control.app/Contents/MacOS/XM5 Control";}; name = Release; };
+		700000000000000000000007 /* UI Tests Debug */ = {isa = XCBuildConfiguration; buildSettings = {GENERATE_INFOPLIST_FILE = YES; PRODUCT_BUNDLE_IDENTIFIER = "local.xm5control.uitests"; PRODUCT_MODULE_NAME = XM5ControlUITests; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited) MENU_BAR_APP"; SWIFT_VERSION = 6.0; TEST_TARGET_NAME = "XM5 Control";}; name = Debug; };
+		700000000000000000000008 /* UI Tests Release */ = {isa = XCBuildConfiguration; buildSettings = {GENERATE_INFOPLIST_FILE = YES; PRODUCT_BUNDLE_IDENTIFIER = "local.xm5control.uitests"; PRODUCT_MODULE_NAME = XM5ControlUITests; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) MENU_BAR_APP"; SWIFT_VERSION = 6.0; TEST_TARGET_NAME = "XM5 Control";}; name = Release; };
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		800000000000000000000001 = {isa = XCConfigurationList; buildConfigurations = (700000000000000000000001, 700000000000000000000002); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		800000000000000000000002 = {isa = XCConfigurationList; buildConfigurations = (700000000000000000000003, 700000000000000000000004); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		800000000000000000000003 = {isa = XCConfigurationList; buildConfigurations = (700000000000000000000005, 700000000000000000000006); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		800000000000000000000004 = {isa = XCConfigurationList; buildConfigurations = (700000000000000000000007, 700000000000000000000008); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+/* End XCConfigurationList section */
+	};
+	rootObject = 600000000000000000000001 /* Project object */;
+}
