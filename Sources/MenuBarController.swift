@@ -3,11 +3,17 @@ import Combine
 import SwiftUI
 
 @MainActor
-final class MenuBarController: NSObject {
+final class MenuBarController: NSObject, NSPopoverDelegate {
+    private struct StatusPresentation {
+        let title: String
+        let accessibilityLabel: String
+    }
+
     private let environment: AppEnvironment
     private let statusItem: NSStatusItem
     private let popover: NSPopover
     private var cancellables = Set<AnyCancellable>()
+    private var pendingStatusPresentation: StatusPresentation?
 
     init(environment: AppEnvironment) {
         self.environment = environment
@@ -16,10 +22,14 @@ final class MenuBarController: NSObject {
         super.init()
 
         popover.behavior = .transient
-        popover.animates = true
-        popover.contentSize = NSSize(width: 390, height: 620)
+        popover.animates = !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        popover.delegate = self
+        popover.contentSize = MenuBarMetrics.displaySize
         popover.contentViewController = NSHostingController(
-            rootView: MenuBarView()
+            rootView: MenuBarView(onSizeChange: { [weak self] size in
+                guard let self, self.popover.contentSize != size else { return }
+                self.popover.contentSize = size
+            })
                 .environmentObject(environment.settings)
                 .environmentObject(environment.headphones)
         )
@@ -46,14 +56,17 @@ final class MenuBarController: NSObject {
     private func updateStatusItem() {
         guard let button = statusItem.button else { return }
         let headphones = environment.headphones
+        let title: String
         if headphones.isReady {
             if let battery = headphones.batteryLevel {
-                button.title = " \(battery)%"
+                title = " \(battery)%"
             } else if let mode = headphones.noiseControlMode {
-                button.title = " \(mode.compactTitle)"
+                title = " \(mode.compactTitle)"
+            } else {
+                title = ""
             }
         } else {
-            button.title = ""
+            title = ""
         }
         let details = [
             headphones.statusText,
@@ -62,7 +75,30 @@ final class MenuBarController: NSObject {
         ]
         .compactMap { $0 }
         .joined(separator: ", ")
-        button.setAccessibilityLabel("XM5 Control, \(details)")
+        let presentation = StatusPresentation(
+            title: title,
+            accessibilityLabel: "XM5 Control, \(details)"
+        )
+
+        // Keep the status item's width fixed while its popover is anchored to it.
+        // Accessibility remains current even while the visual title is queued.
+        button.setAccessibilityLabel(presentation.accessibilityLabel)
+        guard !popover.isShown else {
+            pendingStatusPresentation = presentation
+            return
+        }
+        apply(presentation)
+    }
+
+    private func apply(_ presentation: StatusPresentation) {
+        statusItem.button?.title = presentation.title
+        statusItem.button?.setAccessibilityLabel(presentation.accessibilityLabel)
+    }
+
+    func popoverDidClose(_ notification: Notification) {
+        guard let pendingStatusPresentation else { return }
+        self.pendingStatusPresentation = nil
+        apply(pendingStatusPresentation)
     }
 
     @objc

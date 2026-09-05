@@ -58,7 +58,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let controller = NSHostingController(rootView: content)
         let window = NSWindow(contentViewController: controller)
         window.title = String(localized: "app.name")
-        window.setContentSize(NSSize(width: 390, height: 620))
+        window.setContentSize(MenuBarMetrics.displaySize)
         window.isReleasedWhenClosed = false
         window.center()
         window.makeKeyAndOrderFront(nil)

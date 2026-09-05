@@ -246,6 +246,10 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
     }
 
     private func sendNoiseControl(_ mode: NoiseControlMode) {
+        if isSimulated {
+            noiseControlMode = mode
+            return
+        }
         guard stage == .ready, let asmType else { return }
         let noNoiseCancelling = asmType == 0x21 || asmType == 0x22
         let hasWindMode = asmType == 0x15
