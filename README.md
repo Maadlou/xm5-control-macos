@@ -33,6 +33,10 @@ The headphones must be paired and powered on. Only one process can own the Sony 
 
 The active ANC, ambient, preset EQ, and manual EQ curve are device settings and can be read by Sony Sound Connect. Named presets created by XM5 Control are stored locally on the Mac; applying one sends its curve to the headphones, but its custom name is not inserted into Sony's app-private preset library.
 
+## Landing page
+
+The React + Vite landing page lives in [`website/`](website/). See its [setup instructions](website/README.md) for local development and Vercel configuration.
+
 ## Open source
 
 XM5 Control is open source under the [MIT License](LICENSE). You can use, modify, and distribute it, including in commercial projects, as long as the original copyright and license notice are included.

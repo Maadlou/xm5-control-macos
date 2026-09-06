@@ -1,0 +1,14 @@
+{
+  "title": "XM5 Control for macOS",
+  "description": "Control noise cancellation, ambient sound, and EQ for your Sony WH-1000XM5 headphones from your Mac menu bar.",
+  "icons": {
+    "icon": "/favicon.svg"
+  },
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
