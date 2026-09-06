@@ -2,6 +2,8 @@
 
 A native SwiftUI menu-bar controller for Sony WH-1000XM5 headphones.
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 ## Current features
 
 - Finds a paired WH/WF-1000XM5 through macOS IOBluetooth.
@@ -30,3 +32,9 @@ The development bundle identifier is `local.xm5control`. Replace it with a globa
 The headphones must be paired and powered on. Only one process can own the Sony RFCOMM channel at a time, so quit other Sony-control utilities while testing.
 
 The active ANC, ambient, preset EQ, and manual EQ curve are device settings and can be read by Sony Sound Connect. Named presets created by XM5 Control are stored locally on the Mac; applying one sends its curve to the headphones, but its custom name is not inserted into Sony's app-private preset library.
+
+## Open source
+
+XM5 Control is open source under the [MIT License](LICENSE). You can use, modify, and distribute it, including in commercial projects, as long as the original copyright and license notice are included.
+
+Contributions are welcome. Please open an issue before starting a large feature or protocol change so the work can be coordinated.
