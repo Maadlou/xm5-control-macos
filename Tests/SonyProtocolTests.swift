@@ -34,12 +34,14 @@ final class SonyProtocolTests: XCTestCase {
         XCTAssertFalse(EqualizerPreset.selectableCases.contains(.manual))
     }
 
-    func testCustomEqualizerPayloadRoundTripAndClamping() {
+    func testCustomEqualizerPayloadRoundTripAndClamping() throws {
         let settings = EqualizerSettings(clearBass: 12, bands: [-12, -4, 0, 6, 14])
         XCTAssertEqual(settings, EqualizerSettings(clearBass: 10, bands: [-10, -4, 0, 6, 10]))
-        XCTAssertEqual(settings.sonySetPayload, [0x58, 0x00, 0xA0, 0x06, 20, 0, 6, 10, 16, 20])
+        let encoded = try XCTUnwrap(SonyCommandCodec.encodeEqualizer(settings, specification: .xm5))
+        XCTAssertEqual(encoded, [0x58, 0x00, 0xA0, 0x06, 20, 0, 6, 10, 16, 20])
 
-        let response = [UInt8(0x57)] + Array(settings.sonySetPayload.dropFirst())
-        XCTAssertEqual(EqualizerSettings(sonyPayload: response), settings)
+        let response = [UInt8(0x57)] + Array(encoded.dropFirst())
+        XCTAssertEqual(SonyCommandCodec.decode(response, capabilities: .resolve(model: .whXM5, functions: [])),
+                       .equalizer(preset: .manual, settings: settings))
     }
 }

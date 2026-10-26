@@ -184,7 +184,7 @@ struct EqualizerEditorView: View {
 
     private var clearBassBinding: Binding<Double> {
         Binding(
-            get: { Double(settings.customEqualizerDraft.clearBass) },
+            get: { Double(settings.customEqualizerDraft.clearBass ?? 0) },
             set: { value in
                 var draft = settings.customEqualizerDraft
                 draft.clearBass = max(-10, min(10, Int(value.rounded())))

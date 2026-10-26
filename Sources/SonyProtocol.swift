@@ -41,82 +41,93 @@ enum NoiseControlMode: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
-enum EqualizerPreset: UInt8, CaseIterable, Identifiable, Sendable {
-    case off = 0x00
-    case bright = 0x10
-    case excited = 0x11
-    case mellow = 0x12
-    case relaxed = 0x13
-    case vocal = 0x14
-    case trebleBoost = 0x15
-    case bassBoost = 0x16
-    case speech = 0x17
-    case heavy = 0x30
-    case clear = 0x31
-    case hard = 0x32
-    case soft = 0x33
-    case manual = 0xA0
+struct EqualizerPreset: Equatable, Identifiable, Sendable {
+    let rawValue: UInt8
+    let title: String
+    var id: UInt8 { rawValue }
 
-    var id: Self { self }
+    static func == (lhs: Self, rhs: Self) -> Bool { lhs.rawValue == rhs.rawValue }
 
-    var title: String {
-        switch self {
-        case .off: "Off"
-        case .bright: "Bright"
-        case .excited: "Excited"
-        case .mellow: "Mellow"
-        case .relaxed: "Relaxed"
-        case .vocal: "Vocal"
-        case .trebleBoost: "Treble Boost"
-        case .bassBoost: "Bass Boost"
-        case .speech: "Speech"
-        case .heavy: "Heavy"
-        case .clear: "Clear"
-        case .hard: "Hard"
-        case .soft: "Soft"
-        case .manual: "Manual"
-        }
+    static let off = Self(rawValue: 0x00, title: "Off")
+    static let bright = Self(rawValue: 0x10, title: "Bright")
+    static let excited = Self(rawValue: 0x11, title: "Excited")
+    static let mellow = Self(rawValue: 0x12, title: "Mellow")
+    static let relaxed = Self(rawValue: 0x13, title: "Relaxed")
+    static let vocal = Self(rawValue: 0x14, title: "Vocal")
+    static let trebleBoost = Self(rawValue: 0x15, title: "Treble Boost")
+    static let bassBoost = Self(rawValue: 0x16, title: "Bass Boost")
+    static let speech = Self(rawValue: 0x17, title: "Speech")
+    static let heavy = Self(rawValue: 0x30, title: "Heavy")
+    static let clear = Self(rawValue: 0x31, title: "Clear")
+    static let hard = Self(rawValue: 0x32, title: "Hard")
+    static let soft = Self(rawValue: 0x33, title: "Soft")
+    static let manual = Self(rawValue: 0xA0, title: "Manual")
+    static let custom = Self(rawValue: 0xA0, title: "Custom")
+
+    // Legacy XM5 menu; model-aware menus are introduced in Task 6.
+    static let selectableCases: [Self] = [.off, .bright, .excited, .mellow, .relaxed, .vocal, .trebleBoost, .bassBoost, .speech]
+
+    static func resolve(rawValue: UInt8, specification: EqualizerSpecification) -> Self {
+        specification.presets.first(where: { $0.rawValue == rawValue })
+            ?? Self(rawValue: rawValue, title: String(format: "Unknown (0x%02X)", rawValue))
     }
-
-    static var selectableCases: [Self] { [.off, .bright, .excited, .mellow, .relaxed, .vocal, .trebleBoost, .bassBoost, .speech] }
 }
 
 struct EqualizerSettings: Codable, Equatable, Sendable {
-    static let bandLabels = ["400 Hz", "1 kHz", "2.5 kHz", "6.3 kHz", "16 kHz"]
-    static let flat = EqualizerSettings(clearBass: 0, bands: [0, 0, 0, 0, 0])
+    static let bandLabels = EqualizerSpecification.xm5.bandLabels
+    static let flat = flat(for: .xm5SixValue)
 
-    var clearBass: Int
+    let layout: EqualizerLayoutID
+    var clearBass: Int?
     var bands: [Int]
 
-    init(clearBass: Int, bands: [Int]) {
-        self.clearBass = Self.clamp(clearBass)
-        self.bands = (0..<5).map { index in
-            Self.clamp(index < bands.count ? bands[index] : 0)
+    init(layout: EqualizerLayoutID, clearBass: Int?, bands: [Int]) {
+        let specification = layout.specification
+        self.layout = layout
+        self.clearBass = specification.hasClearBass ? Self.clamp(clearBass ?? 0, to: specification.gainRange) : nil
+        self.bands = specification.bandLabels.indices.map { index in
+            Self.clamp(index < bands.count ? bands[index] : 0, to: specification.gainRange)
         }
+    }
+
+    init(clearBass: Int, bands: [Int]) {
+        self.init(layout: .xm5SixValue, clearBass: clearBass, bands: bands)
+    }
+
+    static func flat(for layout: EqualizerLayoutID) -> Self {
+        Self(layout: layout, clearBass: nil, bands: [])
     }
 
     subscript(band index: Int) -> Int {
         get { bands[index] }
-        set { bands[index] = Self.clamp(newValue) }
+        set { bands[index] = Self.clamp(newValue, to: layout.specification.gainRange) }
     }
 
-    var sonySetPayload: [UInt8] {
-        [0x58, 0x00, EqualizerPreset.manual.rawValue, 0x06]
-            + ([clearBass] + bands).map { UInt8(Self.clamp($0) + 10) }
+    var isValid: Bool {
+        let specification = layout.specification
+        return bands.count == specification.bandLabels.count
+            && bands.allSatisfy(specification.gainRange.contains)
+            && (specification.hasClearBass
+                ? clearBass.map(specification.gainRange.contains) == true
+                : clearBass == nil)
     }
 
-    init?(sonyPayload: [UInt8]) {
-        guard sonyPayload.count >= 10,
-              sonyPayload[1] == 0x00,
-              sonyPayload[2] == EqualizerPreset.manual.rawValue,
-              sonyPayload[3] >= 0x06 else { return nil }
-        self.init(
-            clearBass: Int(sonyPayload[4]) - 10,
-            bands: sonyPayload[5..<10].map { Int($0) - 10 }
-        )
+    private enum CodingKeys: String, CodingKey { case layout, clearBass, bands }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        // Transitional support for the existing store; Task 4 uses an explicit legacy DTO.
+        layout = try container.decodeIfPresent(EqualizerLayoutID.self, forKey: .layout) ?? .xm5SixValue
+        clearBass = try container.decodeIfPresent(Int.self, forKey: .clearBass)
+        bands = try container.decode([Int].self, forKey: .bands)
+        guard isValid else {
+            throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "Invalid EQ layout or gains"))
+        }
     }
 
-    private static func clamp(_ value: Int) -> Int { max(-10, min(10, value)) }
+    private static func clamp(_ value: Int, to range: ClosedRange<Int>) -> Int {
+        max(range.lowerBound, min(range.upperBound, value))
+    }
 }
 
 struct SonyFrame: Equatable, Sendable {

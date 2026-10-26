@@ -67,7 +67,7 @@ struct EqualizerSpecification: Equatable, Sendable {
         id: .xm6TenBand,
         bandLabels: ["31 Hz", "63 Hz", "125 Hz", "250 Hz", "500 Hz", "1 kHz", "2 kHz", "4 kHz", "8 kHz", "16 kHz"],
         gainRange: -6...6, wireOffset: 6, hasClearBass: false,
-        presets: [.off, .heavy, .clear, .hard, .soft, .manual], responseSubtypes: [0x00, 0x04]
+        presets: [.off, .heavy, .clear, .hard, .soft, .custom], responseSubtypes: [0x00, 0x04]
     )
 }
 

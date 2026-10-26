@@ -213,17 +213,19 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
     }
 
     func setEqualizerPreset(_ preset: EqualizerPreset) {
-        guard stage == .ready else { return }
+        guard stage == .ready,
+              let payload = SonyCommandCodec.encodePreset(preset, specification: .xm5) else { return }
         equalizerWorkItem?.cancel()
         beginApplyingChange()
-        send([0x58, 0x00, preset.rawValue, 0x00])
+        send(payload)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
             Task { @MainActor in self?.send([0x56, 0x00]) }
         }
     }
 
     func setCustomEqualizer(_ settings: EqualizerSettings) {
-        guard stage == .ready else { return }
+        guard stage == .ready,
+              let payload = SonyCommandCodec.encodeEqualizer(settings, specification: .xm5) else { return }
         customEqualizer = settings
         equalizerPreset = .manual
         equalizerWorkItem?.cancel()
@@ -231,7 +233,7 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
             Task { @MainActor in
                 guard let self else { return }
                 self.beginApplyingChange()
-                self.send(settings.sonySetPayload)
+                self.send(payload)
             }
         }
         equalizerWorkItem = workItem
@@ -449,11 +451,11 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
     }
 
     private func parseEqualizer(_ payload: [UInt8]) {
-        guard payload.count >= 3, payload[1] == 0x00 else { return }
-        equalizerPreset = EqualizerPreset(rawValue: payload[2])
-        if let settings = EqualizerSettings(sonyPayload: payload) {
-            customEqualizer = settings
-        }
+        guard case .equalizer(let preset, let settings) = SonyCommandCodec.decode(
+            payload, capabilities: .resolve(model: .whXM5, functions: [])
+        ) else { return }
+        equalizerPreset = preset
+        if let settings { customEqualizer = settings }
         lastSyncDate = Date()
         isApplyingChange = false
         commandTimeoutWorkItem?.cancel()
