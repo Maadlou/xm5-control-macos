@@ -116,8 +116,7 @@ struct EqualizerSettings: Codable, Equatable, Sendable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        // Transitional support for the existing store; Task 4 uses an explicit legacy DTO.
-        layout = try container.decodeIfPresent(EqualizerLayoutID.self, forKey: .layout) ?? .xm5SixValue
+        layout = try container.decode(EqualizerLayoutID.self, forKey: .layout)
         clearBass = try container.decodeIfPresent(Int.self, forKey: .clearBass)
         bands = try container.decode([Int].self, forKey: .bands)
         guard isValid else {

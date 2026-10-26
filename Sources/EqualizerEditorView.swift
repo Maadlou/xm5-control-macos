@@ -25,7 +25,7 @@ struct EqualizerEditorView: View {
         .background(.ultraThinMaterial)
         .onAppear {
             if headphones.equalizerPreset == .manual {
-                settings.customEqualizerDraft = headphones.customEqualizer
+                settings.setEqualizerDraft(headphones.customEqualizer)
             }
         }
         .accessibilityIdentifier("equalizer.editor")
@@ -71,7 +71,7 @@ struct EqualizerEditorView: View {
                 Divider().opacity(0.28)
                 Spacer()
             }
-            EqualizerCurve(values: settings.customEqualizerDraft.bands)
+            EqualizerCurve(values: settings.equalizerDraft(for: .xm5SixValue).bands)
                 .stroke(
                     LinearGradient(colors: [.cyan, .blue, .purple], startPoint: .leading, endPoint: .trailing),
                     style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round)
@@ -128,9 +128,17 @@ struct EqualizerEditorView: View {
                     .onSubmit(saveProfile)
                 Button("Save") { saveProfile() }
                     .buttonStyle(.borderedProminent)
+                    .disabled(!settings.canSaveEqualizerChanges)
             }
 
-            if settings.equalizerProfiles.isEmpty {
+            if let error = settings.equalizerStorageError {
+                Text(error)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.orange)
+                    .accessibilityIdentifier("equalizer.storageError")
+            }
+
+            if settings.compatibleEqualizerProfiles(for: .xm5SixValue).isEmpty {
                 Text("Saved on this Mac. Applying one writes its curve to the headphones, where Sound Connect can read the active Manual EQ.")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
@@ -138,7 +146,7 @@ struct EqualizerEditorView: View {
                     .padding(.vertical, 4)
             } else {
                 VStack(spacing: 6) {
-                    ForEach(settings.equalizerProfiles) { profile in
+                    ForEach(settings.compatibleEqualizerProfiles(for: .xm5SixValue)) { profile in
                         HStack {
                             Button {
                                 apply(profile.settings)
@@ -184,9 +192,9 @@ struct EqualizerEditorView: View {
 
     private var clearBassBinding: Binding<Double> {
         Binding(
-            get: { Double(settings.customEqualizerDraft.clearBass ?? 0) },
+            get: { Double(settings.equalizerDraft(for: .xm5SixValue).clearBass ?? 0) },
             set: { value in
-                var draft = settings.customEqualizerDraft
+                var draft = settings.equalizerDraft(for: .xm5SixValue)
                 draft.clearBass = max(-10, min(10, Int(value.rounded())))
                 apply(draft)
             }
@@ -195,9 +203,9 @@ struct EqualizerEditorView: View {
 
     private func bandBinding(_ index: Int) -> Binding<Double> {
         Binding(
-            get: { Double(settings.customEqualizerDraft[band: index]) },
+            get: { Double(settings.equalizerDraft(for: .xm5SixValue)[band: index]) },
             set: { value in
-                var draft = settings.customEqualizerDraft
+                var draft = settings.equalizerDraft(for: .xm5SixValue)
                 draft[band: index] = Int(value.rounded())
                 apply(draft)
             }
@@ -205,12 +213,12 @@ struct EqualizerEditorView: View {
     }
 
     private func apply(_ equalizer: EqualizerSettings) {
-        settings.customEqualizerDraft = equalizer
+        settings.setEqualizerDraft(equalizer)
         headphones.setCustomEqualizer(equalizer)
     }
 
     private func saveProfile() {
-        let profile = settings.saveEqualizerProfile(named: profileName)
+        guard let profile = settings.saveEqualizerProfile(named: profileName, settings: settings.equalizerDraft(for: .xm5SixValue)) else { return }
         profileName = ""
         apply(profile.settings)
     }

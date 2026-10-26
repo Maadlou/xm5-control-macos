@@ -670,12 +670,12 @@ struct MenuBarView: View {
                         }
                     }
                 }
-                if !settings.equalizerProfiles.isEmpty {
+                if !settings.compatibleEqualizerProfiles(for: .xm5SixValue).isEmpty {
                     Divider()
                     Menu("Mac Presets") {
-                        ForEach(settings.equalizerProfiles) { profile in
+                        ForEach(settings.compatibleEqualizerProfiles(for: .xm5SixValue)) { profile in
                             Button(profile.name) {
-                                settings.customEqualizerDraft = profile.settings
+                                settings.setEqualizerDraft(profile.settings)
                                 headphones.setCustomEqualizer(profile.settings)
                             }
                         }
