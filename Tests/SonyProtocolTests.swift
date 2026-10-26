@@ -27,9 +27,10 @@ final class SonyProtocolTests: XCTestCase {
     }
 
     func testEqualizerPresetProtocolValues() {
-        XCTAssertEqual(EqualizerPreset.off.rawValue, 0x00)
-        XCTAssertEqual(EqualizerPreset.bassBoost.rawValue, 0x16)
-        XCTAssertEqual(EqualizerPreset.manual.rawValue, 0xA0)
+        let presets: [EqualizerPreset] = [.off, .bright, .excited, .mellow, .relaxed, .vocal,
+                                         .trebleBoost, .bassBoost, .speech, .manual]
+        XCTAssertEqual(presets.map(\.rawValue), [0x00, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0xA0])
+        XCTAssertEqual(EqualizerPreset.selectableCases, Array(presets.dropLast()))
         XCTAssertFalse(EqualizerPreset.selectableCases.contains(.manual))
     }
 
