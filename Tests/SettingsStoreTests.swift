@@ -157,6 +157,25 @@ final class SettingsStoreTests: XCTestCase {
         }
     }
 
+    @MainActor
+    func testReadOnlyRecoveryStillTracksSequentialDraftEditsWithoutWritingToDisk() throws {
+        try withDefaults { defaults in
+            let raw = Data(#"{"version":3,"drafts":{},"profiles":[]}"#.utf8)
+            defaults.set(raw, forKey: v2Key)
+            let store = SettingsStore(defaults: defaults)
+            var firstEdit = store.equalizerDraft(for: .xm5SixValue)
+            firstEdit[band: 0] = 3
+            store.setEqualizerDraft(firstEdit)
+            var secondEdit = store.equalizerDraft(for: .xm5SixValue)
+            secondEdit[band: 1] = -2
+            store.setEqualizerDraft(secondEdit)
+            XCTAssertEqual(store.equalizerDraft(for: .xm5SixValue).bands, [3, -2, 0, 0, 0])
+            XCTAssertNil(store.saveEqualizerProfile(named: "Cannot save", settings: secondEdit))
+            XCTAssertFalse(store.canSaveEqualizerChanges)
+            XCTAssertEqual(defaults.data(forKey: v2Key), raw)
+        }
+    }
+
     // Literal pre-migration JSON, not produced by the current encoder.
     static let legacyDraft = Data(#"{"clearBass":4,"bands":[1,2,3,4,5]}"#.utf8)
     static let legacyProfiles = Data(#"[{"id":"00000000-0000-0000-0000-000000000001","name":"Night","settings":{"clearBass":4,"bands":[1,2,3,4,5]}}]"#.utf8)

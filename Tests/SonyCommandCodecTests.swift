@@ -5,6 +5,22 @@ final class SonyCommandCodecTests: XCTestCase {
     private let xm5 = SonyCapabilities.resolve(model: .whXM5, functions: [0x6D])
     private let xm6 = SonyCapabilities.resolve(model: .whXM6, functions: [0x20, 0x57, 0x6D])
 
+    // Independent, reference-derived fixtures, not generated with the codec under test.
+    func testLiteralXM6NoiseLayoutsAndEQEndpoints() {
+        XCTAssertEqual(SonyCommandCodec.decode([0x67, 0x19, 1, 1, 0, 1, 8, 1, 2], capabilities: xm6),
+                       .noiseControl(.init(mode: .anc, ambientLevel: 8, focusOnVoice: true, adaptiveFields: [1, 2])))
+        XCTAssertEqual(SonyCommandCodec.decode([0x69, 0x19, 1, 1, 0, 17, 1, 2], capabilities: xm6),
+                       .noiseControl(.init(mode: .ambient, ambientLevel: 17, focusOnVoice: false, adaptiveFields: [1, 2])))
+        XCTAssertEqual(SonyCommandCodec.encodeNoiseControl(
+            .init(mode: .ambient, ambientLevel: 17, focusOnVoice: false, adaptiveFields: [1, 2]), capabilities: xm6
+        ), [0x68, 0x19, 1, 1, 1, 0, 17, 1, 2])
+        let endpoints = EqualizerSettings(layout: .xm6TenBand, clearBass: nil, bands: [-6, 6, 0, 0, 0, 0, 0, 0, 0, 0])
+        XCTAssertEqual(SonyCommandCodec.encodeEqualizer(endpoints, specification: .xm6),
+                       [0x58, 0, 0xA0, 10, 0, 12, 6, 6, 6, 6, 6, 6, 6, 6])
+        XCTAssertEqual(SonyCommandCodec.decode([0x57, 0, 0xA0, 10, 0, 12, 6, 6, 6, 6, 6, 6, 6, 6], capabilities: xm6),
+                       .equalizer(preset: .custom, settings: endpoints))
+    }
+
     func testEQWireFormatsAndClampingStaySeparate() {
         let old = EqualizerSettings(clearBass: 10, bands: [-10, -4, 0, 6, 10])
         XCTAssertEqual(SonyCommandCodec.encodeEqualizer(old, specification: .xm5), [0x58, 0, 0xA0, 6, 20, 0, 6, 10, 16, 20])

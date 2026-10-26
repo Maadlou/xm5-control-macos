@@ -104,9 +104,10 @@ final class SettingsStore: ObservableObject {
     }
 
     func setEqualizerDraft(_ settings: EqualizerSettings) {
-        guard validate(settings), canSaveEqualizerChanges else { return }
+        guard validate(settings) else { return }
+        // A recoverable draft remains editable even when its on-disk source is read-only.
         equalizerDrafts[settings.layout] = settings
-        persistEqualizerStorage()
+        if canSaveEqualizerChanges { persistEqualizerStorage() }
     }
 
     func compatibleEqualizerProfiles(for layout: EqualizerLayoutID) -> [SavedEqualizerProfile] {

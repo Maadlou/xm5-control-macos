@@ -32,3 +32,23 @@ All added packet fixtures are constructed from the pinned definitions above, not
 - Baseline before changes: 7 unit tests passed, zero failures (Xcode 27.1).
 - Characterization: all XM5 factory IDs, six-value EQ encoding/clamping/round-trip, and literal saved draft/profile JSON.
 - Hardware acceptance remains pending in [the manual checklist](xm5-xm6-manual-checklist.md). Verify actual capability list, handshake, ANC variants, charging, EQ subtype/presets/gains on the user's firmware. Reference-source agreement is not a device test.
+
+## Tasks 1-4 implementation verification
+
+- Final unit suite: 32 tests, zero failures. Includes independent literal ANC eight/nine-byte responses, XM6 -6/+6 wire endpoints, strict malformed-packet rejection, legacy backup preservation, layout isolation, and read-only recovery with successive in-memory edits.
+- Release build: succeeded with the existing app target and bundle identity.
+- Existing UI suite: 6 tests, 4 failures. The original `b2554b3` revision reproduced the same four failing tests at the same assertion locations: custom EQ menu lookup, mode-detail accessibility, settings keyboard navigation, and settings surface accessibility. These checks remain unverified; they are not reported as passing or repaired by Tasks 1-4.
+- Independent code review identified a read-only draft defect. A regression test failed before the fix and passed afterward. Disk writes remain blocked when the original storage is damaged; valid in-memory edits still update the editor's working draft.
+- Live XM6 discovery, negotiated session integration, and dynamic ten-band UI remain Tasks 5-6. The running app is still XM5-only at this checkpoint.
+
+Logs and result bundles from this implementation run:
+
+| Check | Evidence |
+|---|---|
+| Baseline units | `/tmp/xm5-xm6-baseline.log` |
+| Final units | `/tmp/xm5-xm6-final-unit.log`; `/tmp/xm5-xm6-derived-data/Logs/Test/` |
+| Current UI | `/tmp/xm5-xm6-ui-regression.log`; `/tmp/xm5-xm6-derived-data/Logs/Test/` |
+| Original-revision UI | `/tmp/xm5-xm6-ui-baseline.log`; `/tmp/xm5-xm6-ui-baseline-derived-data/Logs/Test/` |
+| Release | `/tmp/xm5-xm6-release-build.log` |
+
+Temporary logs may expire. No local headphone result is implied by these automated checks.
