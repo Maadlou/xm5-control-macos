@@ -51,6 +51,10 @@ enum EqualizerPreset: UInt8, CaseIterable, Identifiable, Sendable {
     case trebleBoost = 0x15
     case bassBoost = 0x16
     case speech = 0x17
+    case heavy = 0x30
+    case clear = 0x31
+    case hard = 0x32
+    case soft = 0x33
     case manual = 0xA0
 
     var id: Self { self }
@@ -66,11 +70,15 @@ enum EqualizerPreset: UInt8, CaseIterable, Identifiable, Sendable {
         case .trebleBoost: "Treble Boost"
         case .bassBoost: "Bass Boost"
         case .speech: "Speech"
+        case .heavy: "Heavy"
+        case .clear: "Clear"
+        case .hard: "Hard"
+        case .soft: "Soft"
         case .manual: "Manual"
         }
     }
 
-    static var selectableCases: [Self] { allCases.filter { $0 != .manual } }
+    static var selectableCases: [Self] { [.off, .bright, .excited, .mellow, .relaxed, .vocal, .trebleBoost, .bassBoost, .speech] }
 }
 
 struct EqualizerSettings: Codable, Equatable, Sendable {
