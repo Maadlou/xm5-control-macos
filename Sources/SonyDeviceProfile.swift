@@ -3,6 +3,15 @@ import Foundation
 enum SonyHeadphoneModel: String, Codable, Sendable {
     case whXM5, whXM6, wfXM5, legacyXM5
 
+    var displayName: String {
+        switch self {
+        case .whXM5: "WH-1000XM5"
+        case .whXM6: "WH-1000XM6"
+        case .wfXM5: "WF-1000XM5"
+        case .legacyXM5: "Sony XM5"
+        }
+    }
+
     static func recognize(name: String) -> Self? {
         let upper = name.uppercased()
         for (token, model): (String, Self) in [

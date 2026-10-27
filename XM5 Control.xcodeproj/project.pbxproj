@@ -27,6 +27,7 @@
 		100000000000000000000017 /* SonyDeviceProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000017 /* SonyDeviceProfile.swift */; };
 		100000000000000000000018 /* SonyCommandCodecTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000018 /* SonyCommandCodecTests.swift */; };
 		100000000000000000000019 /* SonyCommandCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000019 /* SonyCommandCodec.swift */; };
+		10000000000000000000001A /* SonyHeadphonesControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20000000000000000000001A /* SonyHeadphonesControllerTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -72,6 +73,7 @@
 		200000000000000000000017 /* SonyDeviceProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SonyDeviceProfile.swift; sourceTree = "<group>"; };
 		200000000000000000000018 /* SonyCommandCodecTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SonyCommandCodecTests.swift; sourceTree = "<group>"; };
 		200000000000000000000019 /* SonyCommandCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SonyCommandCodec.swift; sourceTree = "<group>"; };
+		20000000000000000000001A /* SonyHeadphonesControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SonyHeadphonesControllerTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -126,7 +128,7 @@
 			path = Configuration;
 			sourceTree = "<group>";
 		};
-		300000000000000000000005 /* Tests */ = {isa = PBXGroup; children = (20000000000000000000000C /* SettingsStoreTests.swift */, 200000000000000000000013 /* SonyProtocolTests.swift */, 200000000000000000000016 /* SonyDeviceProfileTests.swift */, 200000000000000000000018 /* SonyCommandCodecTests.swift */); path = Tests; sourceTree = "<group>"; };
+		300000000000000000000005 /* Tests */ = {isa = PBXGroup; children = (20000000000000000000000C /* SettingsStoreTests.swift */, 200000000000000000000013 /* SonyProtocolTests.swift */, 200000000000000000000016 /* SonyDeviceProfileTests.swift */, 200000000000000000000018 /* SonyCommandCodecTests.swift */, 20000000000000000000001A /* SonyHeadphonesControllerTests.swift */); path = Tests; sourceTree = "<group>"; };
 		300000000000000000000006 /* UITests */ = {isa = PBXGroup; children = (20000000000000000000000D /* AppUITests.swift */); path = UITests; sourceTree = "<group>"; };
 		300000000000000000000007 /* Products */ = {
 			isa = PBXGroup;
@@ -204,7 +206,7 @@
 
 /* Begin PBXSourcesBuildPhase section */
 		400000000000000000000004 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (100000000000000000000019, 100000000000000000000017, 100000000000000000000001, 100000000000000000000002, 100000000000000000000003, 100000000000000000000004, 100000000000000000000005, 100000000000000000000006, 100000000000000000000007, 100000000000000000000008, 10000000000000000000000D, 10000000000000000000000E, 100000000000000000000010, 100000000000000000000011); runOnlyForDeploymentPostprocessing = 0; };
-		400000000000000000000006 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (100000000000000000000018, 100000000000000000000016, 10000000000000000000000B, 10000000000000000000000F); runOnlyForDeploymentPostprocessing = 0; };
+		400000000000000000000006 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (10000000000000000000001A, 100000000000000000000018, 100000000000000000000016, 10000000000000000000000B, 10000000000000000000000F); runOnlyForDeploymentPostprocessing = 0; };
 		400000000000000000000007 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (10000000000000000000000C); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXSourcesBuildPhase section */
 
