@@ -6,7 +6,7 @@ Mark each result PASS, FAIL, BLOCKED, or N/A with a reason. A BLOCKED test is no
 
 ## Build to test
 
-Tasks 5-7 now have automated coverage, including separate XM5/XM6 UI scenarios. Hardware results below are still Pending. Use a fresh build of this branch; the published v0.1.0 download does not contain these changes.
+Tasks 5-7 now have automated coverage: 46 unit tests and 15 UI tests pass, including separate XM5/XM6 scenarios. Hardware results below are still Pending. Use a fresh build of this branch; the published v0.1.0 download does not contain these changes.
 
 Record `git rev-parse HEAD`, then build:
 
@@ -42,7 +42,7 @@ The editor shows Applying while a change is pending, Synced after matching custo
 | H07 | Select each offered factory EQ preset and Off. Confirm active preset through Sync Now and Sound Connect; unsupported/unknown entries are not mislabelled as an XM5 preset. | Pending | Pending |
 | H08 | Open Custom EQ. XM5: Clear Bass + 400 Hz/1 kHz/2.5 kHz/6.3 kHz/16 kHz, six sliders, -10...10. XM6: ten frequency sliders, no fabricated Clear Bass, expected -6...6 after evidence validation. No clipped/unreachable controls. | Pending | Pending |
 | H09 | Use modest values, e.g. alternating +2/-2, and change every band individually. Sync/reopen and compare all values in Sound Connect. On XM5 also change Clear Bass independently. No shifted/truncated bands. | Pending | Pending |
-| H10 | Rapidly drag an EQ slider then release. Only the final intended curve remains after readback; no stuck spinner or false success. Test range endpoints briefly at low volume, then restore. | Pending | Pending |
+| H10 | Rapidly drag an EQ slider then release. Include A to B to A edits. Only the final intended curve remains after readback; no stuck spinner or false success. Test range endpoints briefly at low volume, then restore. | Pending | Pending |
 | H11 | Reset Flat; all controls and the device curve return to zero. Switch to a factory preset, then apply a saved Mac profile or edit a band to activate Custom again. Verify the curve actually applied through Sync Now; opening the editor alone need not activate Custom. | Pending | Pending |
 | H12 | Save a named Mac profile, change the curve, apply the saved profile, then quit/relaunch and reapply. Name and every value persist. Delete only the temporary profile afterward. | Pending | Pending |
 | H13 | Close the app's control link if necessary to let Sound Connect connect; change mode, ambient level, voice focus, and EQ from the phone. Resume/reconnect the Mac app and Sync Now. It reflects the phone state without overwriting it. Repeat with simultaneous links only if supported. | Pending | Pending |
@@ -75,7 +75,8 @@ These cannot reliably be induced by ordinary hardware use. Record automated test
 
 - [ ] Unknown EQ preset/subtype/layout: ANC and battery still function; no incorrect EQ write is enabled.
 - [ ] Unsupported capability, malformed/truncated packet, or missing handshake response: bounded error/unavailable state, no crash or endless syncing.
-- [ ] Acknowledged but unapplied write: readback mismatch is reported and confirmed state remains accurate.
+- [ ] Acknowledged but unapplied write: readback mismatch is reported and confirmed state remains accurate. A delayed older query cannot confirm a replacement operation; a failed Custom draft remains editable until successful confirmation or explicit EQ Sync.
+- [ ] Preset-only Custom response with no band values: no initialized or stale flat curve is labelled Synced, and an existing draft is not overwritten.
 - [ ] Damaged saved profile/migration data: healthy records survive and legacy data is not overwritten.
 
 ## Restore and sign off

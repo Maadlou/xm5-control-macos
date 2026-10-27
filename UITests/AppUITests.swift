@@ -132,6 +132,31 @@ final class AppUITests: XCTestCase {
         XCTAssertFalse(editor.staticTexts["Synced"].exists)
     }
     @MainActor
+    func testRejectedCustomWritePreservesEditableDraft() {
+        let app = launchScenario("xm6-reject-custom-writes")
+        let editor = openEditor(app)
+        let band = editor.sliders["equalizer.band.xm6TenBand.0"]
+        band.adjust(toNormalizedSliderPosition: 1.0)
+        XCTAssertTrue(editor.staticTexts["Not confirmed"].waitForExistence(timeout: 6))
+        XCTAssertEqual((band.value as? NSNumber)?.intValue, 6)
+        XCTAssertTrue(editor.buttons["Save"].isEnabled)
+        XCTAssertFalse(editor.staticTexts["Synced"].exists)
+        editor.buttons["simulation.noise"].click()
+        XCTAssertTrue(editor.staticTexts["Not confirmed"].waitForExistence(timeout: 6))
+        XCTAssertEqual((band.value as? NSNumber)?.intValue, 6, "An unrelated noise edit must not discard the failed EQ draft")
+        editor.buttons["Sync equalizer from headphones"].click()
+        XCTAssertTrue(editor.staticTexts["Synced"].waitForExistence(timeout: 5))
+        XCTAssertEqual((band.value as? NSNumber)?.intValue, 0, "Explicit sync deliberately adopts device state")
+    }
+    @MainActor
+    func testPresetOnlyCustomDoesNotOverwriteDraftOrClaimSynced() {
+        let app = launchScenario("xm6-preset-only", extra: ["--ui-test-seed-draft"])
+        let editor = openEditor(app)
+        XCTAssertEqual((editor.sliders["equalizer.band.xm6TenBand.0"].value as? NSNumber)?.intValue, 2)
+        XCTAssertTrue(editor.staticTexts["Draft"].exists)
+        XCTAssertFalse(editor.staticTexts["Synced"].exists)
+    }
+    @MainActor
     func testStorageRecoveryErrorDisablesSavingButAllowsEditing() {
         let app = launchScenario("xm6", extra: ["--ui-test-storage-error"])
         let editor = openEditor(app)

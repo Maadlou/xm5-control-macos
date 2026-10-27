@@ -183,6 +183,65 @@ final class SonyHeadphonesControllerTests: XCTestCase {
         XCTAssertNil(c.equalizerPreset)
         XCTAssertNil(c.pendingEqualizer)
     }
+    func testDelayedAReadbackCannotConfirmRejectedReplacementAAfterB() {
+        let (c, clock, t) = makeController()
+        let id = ready(c)
+        var a = EqualizerSettings.flat(for: .xm6TenBand)
+        a[band: 0] = 1
+        var b = a; b[band: 0] = 2
+        c.setCustomEqualizer(a); clock.advance(0.12); clock.advance(0.25)
+        c.setCustomEqualizer(b); clock.advance(0.12)
+        c.setCustomEqualizer(a); clock.advance(0.12); clock.advance(0.25)
+        let queries = t.payloads.filter { $0 == [0x56, 0] }.count
+        c.handleIncomingPayload([0x57,0,0xA0,10,7,6,6,6,6,6,6,6,6,6], sessionID: id)
+        XCTAssertTrue(c.isApplyingChange, "The delayed first A query must not confirm the replacement A operation")
+        XCTAssertEqual(t.payloads.filter { $0 == [0x56,0] }.count, queries + 1, "Drain the old query before issuing the replacement's readback")
+        c.handleIncomingPayload([0x57,0,0xA0,10,8,6,6,6,6,6,6,6,6,6], sessionID: id)
+        clock.advance(3)
+        XCTAssertFalse(c.isApplyingChange)
+        XCTAssertNotNil(c.lastErrorMessage)
+        XCTAssertEqual(c.customEqualizer, b)
+    }
+    func testDelayedNoiseReadbackCannotConfirmReplacementOperation() {
+        let (c, clock, _) = makeController()
+        let id = ready(c)
+        c.setNoiseControl(.anc); clock.advance(0.25)
+        c.setNoiseControl(.ambient)
+        c.setNoiseControl(.anc); clock.advance(0.25)
+        c.handleIncomingPayload([0x67,0x19,1,1,0,0,10,1,2], sessionID: id)
+        XCTAssertTrue(c.isApplyingChange)
+        c.handleIncomingPayload([0x67,0x19,1,1,1,0,10,1,2], sessionID: id)
+        clock.advance(3)
+        XCTAssertNotNil(c.lastErrorMessage)
+        XCTAssertEqual(c.noiseControlMode, .ambient)
+    }
+    func testPeriodicQueryCannotConfirmAnOperationAndMissingReplyRequiresResync() {
+        let (c, clock, _) = makeController()
+        let id = ready(c)
+        c.refresh()
+        c.setCustomEqualizer(.flat(for: .xm6TenBand)); clock.advance(0.12); clock.advance(0.25)
+        c.handleIncomingPayload([0x57,0,0xA0,10,6,6,6,6,6,6,6,6,6,6], sessionID: id)
+        XCTAssertTrue(c.isApplyingChange, "An earlier manual/poll query is not this operation's readback")
+        clock.advance(3)
+        XCTAssertNotNil(c.lastErrorMessage)
+        c.refresh()
+        XCTAssertNotEqual(c.sessionID, id, "An unanswered query cannot be reassigned to a new operation")
+        c.handleIncomingPayload([0x57,0,0xA0,10,6,6,6,6,6,6,6,6,6,6], sessionID: id)
+        XCTAssertFalse(c.isReady)
+    }
+    func testPresetOnlyCustomNeverEstablishesAReportedCurve() {
+        let (c, _, _) = makeController()
+        let id = ready(c)
+        XCTAssertTrue(c.hasReportedEqualizerCurve)
+        c.handleIncomingPayload([0x57,0,0xA0,0], sessionID: id)
+        XCTAssertEqual(c.equalizerPreset?.rawValue, 0xA0)
+        XCTAssertFalse(c.hasReportedEqualizerCurve)
+        c.handleIncomingPayload([0x57,0,0x30,10,7,6,6,6,6,6,6,6,6,6], sessionID: id)
+        XCTAssertTrue(c.hasReportedEqualizerCurve)
+        c.handleIncomingPayload([0x57,0,0xA0,0], sessionID: id)
+        XCTAssertFalse(c.hasReportedEqualizerCurve, "Do not reuse another preset's curve")
+    }
+
     func testMissingInitialEQStopsPollingItAfterTimeout() {
         let (c, clock, t) = makeController()
         let id = c.replaceSession(model: .whXM6, address: "A")

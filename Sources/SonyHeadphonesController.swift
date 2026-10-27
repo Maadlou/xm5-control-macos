@@ -29,6 +29,7 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
     @Published private(set) var isApplyingChange = false
     @Published private(set) var equalizerPreset: EqualizerPreset?
     @Published private(set) var customEqualizer = EqualizerSettings.flat
+    @Published private(set) var hasReportedEqualizerCurve = false
     @Published private(set) var pendingEqualizer: EqualizerSettings?
     @Published private(set) var pendingNoiseControl: SonyNoiseControlState?
     @Published private(set) var firmwareVersion: String?
@@ -75,13 +76,14 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
         let id = UUID()
         let preset: UInt8
         let settings: EqualizerSettings?
-        var readbackIssued = false
+        var readbackRequested = false
     }
     private struct PendingNoise {
         let id = UUID()
         let state: SonyNoiseControlState
-        var readbackIssued = false
+        var readbackRequested = false
     }
+    private struct ReadTicket { let owner: UUID? }
     private static let sonyUUIDBytes: [UInt8] = [
         0x95, 0x6C, 0x7B, 0x26, 0xD4, 0x9A, 0x4B, 0xA8,
         0xB0, 0x3F, 0xB1, 0x7D, 0x39, 0x3C, 0xB6, 0xE2,
@@ -103,6 +105,11 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
     private var pendingEQ: PendingEQ?
     private var pendingNoise: PendingNoise?
     private var initialEQRequested = false
+    // Responses have no request ID. Keep one query per feature in flight and retain its owner
+    // across edits, including unowned initial/manual/poll queries.
+    private var noiseReadTicket: ReadTicket?
+    private var eqReadTicket: ReadTicket?
+    private var requiresReadbackResync = false
     private var cancellations: [String: () -> Void] = [:]
     private var timerTokens: [String: UUID] = [:]
     private var payloadWriter: (([UInt8]) -> Void)?
@@ -120,6 +127,8 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
         case xm6WithoutEQ = "xm6-no-eq"
         case disconnectedXM5 = "disconnected-xm5"
         case xm6RejectWrites = "xm6-reject-writes"
+        case xm6RejectCustomWrites = "xm6-reject-custom-writes"
+        case xm6PresetOnly = "xm6-preset-only"
     }
     private var simulationScenario: SimulatedScenario = .xm5
     private var simulatedModel: SonyHeadphoneModel?
@@ -182,7 +191,8 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
         batteryLevel = nil; isCharging = false; firmwareVersion = nil; controlChannelID = nil
         equalizerPreset = nil; customEqualizer = .flat(for: model == .whXM6 ? .xm6TenBand : .xm5SixValue)
         pendingEQ = nil; pendingNoise = nil; pendingEqualizer = nil; pendingNoiseControl = nil
-        isApplyingChange = false; initialEQRequested = false
+        isApplyingChange = false; initialEQRequested = false; hasReportedEqualizerCurve = false
+        noiseReadTicket = nil; eqReadTicket = nil; requiresReadbackResync = false
         lastSyncDate = nil; lastErrorMessage = nil; syncPollCount = 0
         nextRetryDate = nil; retrySecondsRemaining = nil
     }
@@ -244,12 +254,21 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
     }
     func refresh() {
         cancel("retry"); nextRetryDate = nil; retrySecondsRemaining = nil; retryAttempt = 0
+        lastErrorMessage = nil
+        if requiresReadbackResync {
+            resetControlState()
+            if payloadWriter != nil || isSimulation { beginHandshake(sessionID: sessionID) }
+            else { refresh(shouldOpenLink: true) }
+            return
+        }
         if payloadWriter == nil, !isSimulation { refresh(shouldOpenLink: true) }
         requestCurrentSettings()
     }
     func refreshEqualizer() {
-        guard isReady, let specification = equalizerSpecification else { return }
-        send(SonyCommandCodec.equalizerQuery(specification: specification))
+        guard isReady, equalizerSpecification != nil else { return }
+        if requiresReadbackResync { refresh(); return }
+        lastErrorMessage = nil
+        requestEqualizer()
     }
     private func poll() {
         retrySecondsRemaining = nextRetryDate.map { max(0, Int(ceil($0.timeIntervalSinceNow))) }
@@ -258,11 +277,23 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
         syncPollCount += 1
         if syncPollCount >= 5 { syncPollCount = 0; requestCurrentSettings() }
     }
-    private func requestCurrentSettings() {
+    private func requestNoise(owner: UUID? = nil) {
+        guard noiseReadTicket == nil, let type = capabilities?.noiseControlType,
+              owner != nil || pendingNoise == nil else { return }
+        noiseReadTicket = ReadTicket(owner: owner)
+        send([0x66, type])
+    }
+    private func requestEqualizer(owner: UUID? = nil) {
+        guard eqReadTicket == nil, let specification = equalizerSpecification,
+              owner != nil || pendingEQ == nil else { return }
+        eqReadTicket = ReadTicket(owner: owner)
+        send(SonyCommandCodec.equalizerQuery(specification: specification))
+    }
+    private func requestCurrentSettings(includeNoise: Bool = true) {
         guard isReady, let capabilities else { return }
-        if let type = capabilities.noiseControlType { send([0x66, type]) }
+        if includeNoise { requestNoise() }
         if capabilities.supportsBattery { send([0x22, 0x00]) }
-        if let specification = equalizerSpecification {
+        if equalizerSpecification != nil {
             if !initialEQRequested {
                 initialEQRequested = true
                 later("initialEQ", after: 3) { [weak self] in
@@ -270,7 +301,7 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
                     self.disableEqualizer("The headphones did not report their EQ layout. Noise control remains available.")
                 }
             }
-            send(SonyCommandCodec.equalizerQuery(specification: specification))
+            requestEqualizer()
         }
         if firmwareVersion == nil { send([0x04, 0x02]) }
     }
@@ -336,12 +367,13 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
         let write: @MainActor () -> Void = { [weak self] in
             guard let self, self.pendingNoise?.id == pending.id, self.send(payload) else { return }
             self.later("noise.read", after: 0.25) { [weak self] in
-                guard let self, self.pendingNoise?.id == pending.id, let type = self.capabilities?.noiseControlType else { return }
-                self.pendingNoise?.readbackIssued = true
-                self.send([0x66, type])
+                guard let self, self.pendingNoise?.id == pending.id else { return }
+                self.pendingNoise?.readbackRequested = true
+                self.requestNoise(owner: pending.id)
             }
             self.later("noise.deadline", after: 3) { [weak self] in
                 guard let self, self.pendingNoise?.id == pending.id else { return }
+                self.requiresReadbackResync = self.requiresReadbackResync || self.noiseReadTicket != nil
                 self.pendingNoise = nil; self.pendingNoiseControl = nil; self.cancel("noise.read"); self.updateApplying()
                 self.lastErrorMessage = "Noise-control change was not confirmed. Sync and try again."
             }
@@ -365,12 +397,13 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
         let write: @MainActor () -> Void = { [weak self] in
             guard let self, self.pendingEQ?.id == pending.id, self.send(payload) else { return }
             self.later("eq.read", after: 0.25) { [weak self] in
-                guard let self, self.pendingEQ?.id == pending.id, let specification = self.equalizerSpecification else { return }
-                self.pendingEQ?.readbackIssued = true
-                self.send(SonyCommandCodec.equalizerQuery(specification: specification))
+                guard let self, self.pendingEQ?.id == pending.id else { return }
+                self.pendingEQ?.readbackRequested = true
+                self.requestEqualizer(owner: pending.id)
             }
             self.later("eq.deadline", after: 3) { [weak self] in
                 guard let self, self.pendingEQ?.id == pending.id else { return }
+                self.requiresReadbackResync = self.requiresReadbackResync || self.eqReadTicket != nil
                 self.pendingEQ = nil; self.pendingEqualizer = nil; self.cancel("eq.read"); self.updateApplying()
                 self.lastErrorMessage = "Equalizer change was not confirmed. Sync and try again."
             }
@@ -406,11 +439,13 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
             equalizerSpecification = capabilities.equalizer
             if let specification = capabilities.equalizer { lastKnownEqualizerLayout = specification.id }
             else { equalizerUnavailableReason = "Equalizer is not advertised by this device." }
-            guard let type = capabilities.noiseControlType else { fail("This device did not report a supported noise-control function."); return }
-            stage = .noiseControl; send([0x66, type])
+            guard capabilities.noiseControlType != nil else { fail("This device did not report a supported noise-control function."); return }
+            stage = .noiseControl; requestNoise()
         case .noiseControl(let state):
             guard stage == .noiseControl || stage == .ready else { return }
             let firstSync = stage == .noiseControl
+            let replyOwner = payload.first == 0x67 ? noiseReadTicket?.owner : nil
+            if payload.first == 0x67 { noiseReadTicket = nil }
             noiseControlMode = state.mode; ambientLevel = state.ambientLevel; focusOnVoice = state.focusOnVoice
             adaptiveFields = state.adaptiveFields
             stage = .ready; linkState = .ready; lastSyncDate = Date()
@@ -418,23 +453,32 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
                 cancel("handshake"); cancel("retry"); retryAttempt = 0; nextRetryDate = nil; retrySecondsRemaining = nil
                 lastErrorMessage = nil
             }
-            if payload.first == 0x67, let pending = pendingNoise, pending.readbackIssued,
+            if payload.first == 0x67, let pending = pendingNoise, pending.readbackRequested, replyOwner == pending.id,
                state.mode == pending.state.mode,
                (state.mode != .ambient || (state.ambientLevel == pending.state.ambientLevel && state.focusOnVoice == pending.state.focusOnVoice)) {
                 pendingNoise = nil; pendingNoiseControl = nil; cancel("noise.read"); cancel("noise.deadline"); updateApplying()
             }
-            if firstSync { requestCurrentSettings() }
+            if firstSync { requestCurrentSettings(includeNoise: false) }
+            else if payload.first == 0x67, let pending = pendingNoise, pending.readbackRequested, replyOwner != pending.id {
+                requestNoise(owner: pending.id)
+            }
         case .battery(let level, let charging):
             batteryLevel = level; isCharging = charging; lastSyncDate = Date()
         case .equalizer(let preset, let settings):
             guard isReady, equalizerSpecification != nil else { return }
             cancel("initialEQ")
+            let replyOwner = payload.first == 0x57 ? eqReadTicket?.owner : nil
+            if payload.first == 0x57 { eqReadTicket = nil }
             equalizerPreset = preset
+            hasReportedEqualizerCurve = settings != nil
             if let settings { customEqualizer = settings }
             lastSyncDate = Date()
-            if payload.first == 0x57, let pending = pendingEQ, pending.readbackIssued,
+            if payload.first == 0x57, let pending = pendingEQ, pending.readbackRequested, replyOwner == pending.id,
                preset.rawValue == pending.preset, pending.settings == nil || settings == pending.settings {
                 pendingEQ = nil; pendingEqualizer = nil; cancel("eq.read"); cancel("eq.deadline"); updateApplying()
+            }
+            if payload.first == 0x57, let pending = pendingEQ, pending.readbackRequested, replyOwner != pending.id {
+                requestEqualizer(owner: pending.id)
             }
         case .firmware(let version): firmwareVersion = version; lastSyncDate = Date()
         }
@@ -530,6 +574,8 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
         simulatedNoise = [0x67, 0x19, 1, 1, 1, 0, 12, 0, 0]
         let spec: EqualizerSpecification = model == .whXM6 ? .xm6 : .xm5
         simulatedEQ = [0x57, 0, model == .whXM6 ? 0x30 : 0x16, UInt8(spec.valueCount)] + Array(repeating: UInt8(spec.wireOffset), count: spec.valueCount)
+        if scenario == .xm6RejectCustomWrites { simulatedEQ[2] = 0xA0 }
+        if scenario == .xm6PresetOnly { simulatedEQ = [0x57,0,0xA0,0] }
         beginHandshake(sessionID: id)
     }
     private func simulate(_ payload: [UInt8]) {
@@ -542,12 +588,12 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
                 ? [7,0,2,0x6D,0,0x20,0] : [7,0,3,0x6D,0,0x20,0,0x57,0]
         case 0x66: response = simulatedNoise
         case 0x68:
-            if simulationScenario != .xm6RejectWrites { simulatedNoise = [0x67] + payload.dropFirst() }
+            if simulationScenario != .xm6RejectWrites && simulationScenario != .xm6RejectCustomWrites { simulatedNoise = [0x67] + payload.dropFirst() }
             return
         case 0x22: response = [0x23,0,78,0]
         case 0x56: response = simulatedEQ
         case 0x58:
-            guard simulationScenario != .xm6RejectWrites else { return }
+            guard simulationScenario != .xm6RejectWrites && simulationScenario != .xm6RejectCustomWrites else { return }
             if payload.count > 4 { simulatedEQ = [0x57] + payload.dropFirst() }
             else { simulatedEQ[2] = payload[2] }
             return

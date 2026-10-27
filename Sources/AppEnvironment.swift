@@ -36,6 +36,9 @@ final class AppEnvironment {
                 settings.saveEqualizerProfile(named: "XM5 only", settings: .flat)
                 settings.saveEqualizerProfile(named: "XM6 only", settings: .flat(for: .xm6TenBand))
             }
+            if arguments.contains("--ui-test-seed-draft") {
+                settings.setEqualizerDraft(EqualizerSettings(layout: .xm6TenBand, clearBass: nil, bands: [2,0,0,0,0,0,0,0,0,0]))
+            }
             return AppEnvironment(settings: settings, headphones: SonyHeadphonesController(simulatedScenario: scenario))
         }
         // Hosted unit tests must not open the user's Bluetooth link or migrate real preferences.

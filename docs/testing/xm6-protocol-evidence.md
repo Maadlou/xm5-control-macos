@@ -59,7 +59,7 @@ Live discovery now uses the connected-first, stable-device policy. Each control 
 
 Noise control remains available when EQ is unadvertised, has an unsupported layout, or never responds to the initial query. The editor and both profile pickers use the negotiated layout. Offline editing uses an explicitly labelled layout, and switching simulated generations while the editor is open is covered by UI tests. DEBUG fixtures never open the physical control link; hosted unit tests use isolated preferences.
 
-- Final combined suite: 42 unit tests and 13 UI tests, zero failures in `/tmp/xm5-xm6-final-tests.log`.
+- Pre-review combined suite: 42 unit tests and 13 UI tests, zero failures in `/tmp/xm5-xm6-final-tests.log`.
 - The previous UI query failures were corrected using observed macOS accessibility roles and stable identifiers. The original six XM5 UI checks now pass alongside the new scenarios.
 - Both profile pickers exclude incompatible curves. The XM6 last band is reachable by scrolling and adjusts to +6 through XCTest's native slider action.
 - Simulated XM6 editor visually inspected from a test recording: all ten labels/sliders fit correctly, with saved profiles below in the scroll view. DEBUG model-switch buttons are excluded from ordinary app use and Release builds.
@@ -67,3 +67,21 @@ Noise control remains available when EQ is unadvertised, has an unsupported layo
 - Release configuration verification is recorded in `/tmp/xm5-xm6-final-release.log`.
 
 These are automated/simulated results. WH-1000XM5 regression acceptance, WH-1000XM6 device/firmware verification, and mixed-device hardware acceptance remain Pending in the manual checklist. No release is marked hardware-verified by this change.
+
+### Final review fixes and verified checkpoint
+
+The independent review found three state-interleaving defects. Each was reproduced before its fix:
+
+1. A delayed A readback could confirm a replacement A request after an intervening B write. There is now one outstanding query per feature, including initial/manual/poll queries. A query retains its operation owner across edits. An old reply drains that query before the replacement's query is issued, and cannot complete the replacement operation. An unanswered query is never reassigned; explicit Sync starts a fresh session when needed.
+2. A rejected Custom write could replace the working draft with the device's previous curve. The editor tracks locally edited layouts and retains dirty values across failed writes and unrelated noise edits. Successful matching confirmation or explicit EQ Sync can adopt device values.
+3. A preset-only Custom response could make an initialized or stale curve appear confirmed. The controller now tracks whether actual band values were reported for the current state. Preset-only responses update the preset label but cannot overwrite a draft or display Synced.
+
+Final results after these fixes:
+
+- 46 unit tests and 15 UI tests passed, zero failures: `/tmp/xm5-xm6-final-verified-tests.log`.
+- Release build passed: `/tmp/xm5-xm6-reviewed-release.log`.
+- Release bundle signature verification passed. App name remains `XM5 Control`, bundle identifier remains `local.xm5control`, and minimum macOS remains 14.0.
+- Website production build passed; its dependency manifests and lockfile are unchanged.
+- The regression cases include delayed A/B/A EQ and noise responses, manual/poll query ownership, missing-reply resynchronization, Custom without band values, dirty-draft preservation after an unrelated noise edit, and deliberate Sync adoption.
+
+Hardware acceptance remains pending. The original RFCOMM framing/ACK transport was retained; Bluetooth delivery, firmware-specific behavior, SDP publication, sleep/reconnect behavior, and multipoint interaction still require the user-run checklist. No publishing or release distribution was performed.

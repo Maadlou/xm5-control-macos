@@ -6,6 +6,7 @@ struct EqualizerEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var profileName = ""
     @State private var offlineLayout: EqualizerLayoutID = .xm5SixValue
+    @State private var locallyEditedLayouts: Set<EqualizerLayoutID> = []
 
     private var isConnecting: Bool { headphones.linkState == .opening || headphones.linkState == .handshaking }
     private var specification: EqualizerSpecification? {
@@ -18,7 +19,7 @@ struct EqualizerEditorView: View {
         if headphones.isApplyingChange { return "Applying…" }
         if headphones.lastErrorMessage != nil { return "Not confirmed" }
         guard let specification else { return "Unavailable" }
-        return headphones.equalizerPreset?.rawValue == 0xA0 && settings.equalizerDraft(for: specification.id) == headphones.customEqualizer ? "Synced" : "Draft"
+        return headphones.hasReportedEqualizerCurve && headphones.equalizerPreset?.rawValue == 0xA0 && settings.equalizerDraft(for: specification.id) == headphones.customEqualizer ? "Synced" : "Draft"
     }
 
     var body: some View {
@@ -61,13 +62,18 @@ struct EqualizerEditorView: View {
         .onChange(of: headphones.equalizerSpecification?.id) { _, _ in syncReportedDraft() }
         .onChange(of: headphones.customEqualizer) { _, _ in syncReportedDraft() }
         .onChange(of: headphones.pendingEqualizer) { _, _ in syncReportedDraft() }
+        .onChange(of: headphones.lastSyncDate) { _, _ in syncReportedDraft() }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("equalizer.editor")
     }
     private func syncReportedDraft() {
         guard let specification = headphones.equalizerSpecification,
+              headphones.lastErrorMessage == nil, headphones.hasReportedEqualizerCurve,
               headphones.equalizerPreset?.rawValue == 0xA0, headphones.pendingEqualizer == nil,
               headphones.customEqualizer.layout == specification.id else { return }
+        if locallyEditedLayouts.contains(specification.id),
+           settings.equalizerDraft(for: specification.id) != headphones.customEqualizer { return }
+        locallyEditedLayouts.remove(specification.id)
         settings.setEqualizerDraft(headphones.customEqualizer)
     }
     private var header: some View {
@@ -82,7 +88,10 @@ struct EqualizerEditorView: View {
                     .font(.system(size: 11)).foregroundStyle(.secondary)
             }
             Spacer()
-            Button { headphones.refreshEqualizer() } label: { Image(systemName: "arrow.clockwise") }
+            Button {
+                if let specification { locallyEditedLayouts.remove(specification.id) }
+                headphones.refreshEqualizer()
+            } label: { Image(systemName: "arrow.clockwise") }
                 .buttonStyle(.borderless).disabled(!canApplyLive)
                 .accessibilityLabel("Sync equalizer from headphones")
             Button { dismiss() } label: { Image(systemName: "xmark.circle.fill") }
@@ -177,6 +186,7 @@ struct EqualizerEditorView: View {
             if CommandLine.arguments.contains("-ui-testing") && CommandLine.arguments.contains("--ui-test-host") {
                 Button("XM5") { headphones.useSimulation(.xm5) }.accessibilityIdentifier("simulation.switch.xm5")
                 Button("XM6") { headphones.useSimulation(.xm6) }.accessibilityIdentifier("simulation.switch.xm6")
+                Button("Noise") { headphones.setNoiseControl(.anc) }.accessibilityIdentifier("simulation.noise")
             }
             #endif
             if headphones.isApplyingChange { ProgressView().controlSize(.small).accessibilityLabel("Applying equalizer") }
@@ -187,6 +197,7 @@ struct EqualizerEditorView: View {
     }
     private func apply(_ equalizer: EqualizerSettings) {
         guard specification?.id == equalizer.layout else { return }
+        locallyEditedLayouts.insert(equalizer.layout)
         settings.setEqualizerDraft(equalizer)
         if canApplyLive { headphones.setCustomEqualizer(equalizer) }
     }
