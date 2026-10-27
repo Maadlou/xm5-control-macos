@@ -53,7 +53,7 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
         }
     }
     var protocolDescription: String {
-        protocolVersion.map { "MDR v\($0) / RFCOMM\(controlChannelID.map { " channel \($0)" } ?? "")" } ?? "Not negotiated"
+        protocolVersion.map { "MDR v2 (revision \(String(format: "0x%08X", $0))) / RFCOMM\(controlChannelID.map { " channel \($0)" } ?? "")" } ?? "Not negotiated"
     }
     var capabilityDescription: String {
         guard let capabilities else { return "Not negotiated" }
@@ -430,7 +430,10 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
         switch event {
         case .protocolInfo(let version, let table1, _):
             guard stage == .protocolInfo else { return }
-            guard version == 2, table1 else { fail("Unsupported Sony protocol or command table."); return }
+            Self.logger.info("Sony protocol reply: version=\(version, privacy: .public), table1=\(table1, privacy: .public), payload=\(payload.map { String(format: "%02X", $0) }.joined(separator: " "), privacy: .public)")
+            // The revision is opaque, not the MDR family number. This is the V2 service;
+            // the advertised table and validated function/layout replies establish compatibility.
+            guard table1 else { fail("Unsupported Sony command table (revision \(String(format: "0x%08X", version)))."); return }
             protocolVersion = version; stage = .supportFunctions; send([0x06, 0x00])
         case .supportedFunctions(let functions):
             guard stage == .supportFunctions, let model else { return }
@@ -452,6 +455,7 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
             if firstSync {
                 cancel("handshake"); cancel("retry"); retryAttempt = 0; nextRetryDate = nil; retrySecondsRemaining = nil
                 lastErrorMessage = nil
+                Self.logger.info("Sony controls ready; model=\(self.model?.rawValue ?? "unknown", privacy: .public), mode=\(state.mode.rawValue, privacy: .public)")
             }
             if payload.first == 0x67, let pending = pendingNoise, pending.readbackRequested, replyOwner == pending.id,
                state.mode == pending.state.mode,
@@ -582,7 +586,8 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
         guard let command = payload.first else { return }
         let response: [UInt8]
         switch command {
-        case 0: response = [1,0,0,0,0,2,0,1]
+        case 0:
+            response = simulatedModel == .whXM6 ? [1,0,3,0,0x30,0x32,0,0] : [1,0,0,0,0,2,0,1]
         case 6:
             response = simulationScenario == .xm6WithoutEQ
                 ? [7,0,2,0x6D,0,0x20,0] : [7,0,3,0x6D,0,0x20,0,0x57,0]

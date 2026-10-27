@@ -116,6 +116,11 @@ final class SonyCommandCodecTests: XCTestCase {
         XCTAssertNil(SonyCommandCodec.encodeNoiseControl(.init(mode: .anc, ambientLevel: 10, focusOnVoice: false, adaptiveFields: []), capabilities: noANC))
     }
 
+    func testCapturedXM6ProtocolRevisionIsAnOpaqueWireValue() {
+        XCTAssertEqual(SonyCommandCodec.decode([0x01,0x00,0x03,0x00,0x30,0x32,0x00,0x00], capabilities: xm6),
+                       .protocolInfo(version: 0x03003032, supportsTable1: true, supportsTable2: true))
+    }
+
     func testHandshakeAndSupportedFunctionValidation() {
         XCTAssertEqual(SonyCommandCodec.decode([1, 0, 0, 0, 0, 2, 0, 1], capabilities: xm6),
                        .protocolInfo(version: 2, supportsTable1: true, supportsTable2: false))

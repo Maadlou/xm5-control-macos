@@ -6,7 +6,7 @@ Mark each result PASS, FAIL, BLOCKED, or N/A with a reason. A BLOCKED test is no
 
 ## Build to test
 
-Tasks 5-7 now have automated coverage: 46 unit tests and 15 UI tests pass, including separate XM5/XM6 scenarios. Hardware results below are still Pending. Use a fresh build of this branch; the published v0.1.0 download does not contain these changes.
+Tasks 5-7 now have automated coverage: 48 unit tests and 15 UI tests pass, including separate XM5/XM6 scenarios. Hardware results below are still Pending. Use a fresh build of this branch; the published v0.1.0 download does not contain these changes.
 
 Record `git rev-parse HEAD`, then build:
 
@@ -33,7 +33,7 @@ The editor shows Applying while a change is pending, Synced after matching custo
 
 | ID | Action and expected result | XM5 result | XM6 result |
 |---|---|---|---|
-| H01 | Launch with this model connected. Correct device name/address appears and controls become ready within the configured handshake timeout; audio continues. | Pending | Pending |
+| H01 | Launch with this model connected. Correct device name/address appears and controls become ready within the configured handshake timeout; audio continues. | Pending | Connection and Ambient-state readback observed on firmware 3.1.5; audio continuity and full UI confirmation pending |
 | H02 | Read battery and charging state; compare with Sound Connect allowing for display rounding/delay. Firmware and control channel appear in diagnostics. If practical, connect/disconnect charging power and verify the indicator changes. | Pending | Pending |
 | H03 | Select Off, ANC, then Ambient. For each, verify the audible effect and confirm the selected state after Sync Now and reopening the panel. | Pending | Pending |
 | H04 | In Ambient, set levels 1, 8, and 20. Values read back correctly, persist after Sync Now, and change ambient passthrough. Rapidly drag to a final level; the last value wins. | Pending | Pending |

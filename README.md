@@ -9,7 +9,7 @@ A native SwiftUI menu-bar controller for Sony WH-1000XM5 and WH-1000XM6 headphon
 | Device | Implementation | Hardware verification |
 |---|---|---|
 | WH-1000XM5 | Existing six-value EQ and controls preserved; automated regression coverage | Re-run the manual checklist before release |
-| WH-1000XM6 | Model-aware discovery, ANC/ambient, battery, and ten-band EQ implemented | Pending local device and firmware testing |
+| WH-1000XM6 | Model-aware discovery, ANC/ambient, battery, and ten-band EQ implemented | Connection and noise-state readback observed on firmware 3.1.5; full checklist pending |
 | WF-1000XM5 | Legacy discovery retained | No new hardware certification |
 | WF-1000XM6 | Not supported by this change | Not tested |
 

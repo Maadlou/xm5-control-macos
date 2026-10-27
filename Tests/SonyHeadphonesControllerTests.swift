@@ -56,7 +56,22 @@ final class SonyHeadphonesControllerTests: XCTestCase {
         XCTAssertTrue(c.isReady)
         XCTAssertNil(c.lastErrorMessage)
     }
-    func testMissingOrUnknownHandshakeHasBoundedFailure() {
+    // Captured from WH-1000XM6 firmware 3.1.5 during the connection investigation.
+    func testCapturedXM6RevisionNegotiatesAdvertisedCommandTable() {
+        let (c, _, t) = makeController()
+        let id = c.replaceSession(model: .whXM6, address: "A")
+        c.beginHandshake(sessionID: id)
+        c.handleIncomingPayload([0x01,0x00,0x03,0x00,0x30,0x32,0x00,0x00], sessionID: id)
+        XCTAssertEqual(t.payloads.last, [0x06,0x00])
+        XCTAssertEqual(c.protocolVersion, 0x03003032)
+        c.handleIncomingPayload([7,0,3,0x6D,0,0x20,0,0x57,0], sessionID: id)
+        c.handleIncomingPayload([0x67,0x19,1,1,1,0,10,0,0], sessionID: id)
+        XCTAssertTrue(c.isReady)
+        XCTAssertTrue(c.protocolDescription.contains("MDR v2"))
+        XCTAssertTrue(c.protocolDescription.contains("0x03003032"))
+    }
+
+    func testMissingHandshakeOrUnsupportedTableHasBoundedFailure() {
         let (c, clock, _) = makeController()
         let id = c.replaceSession(model: .whXM6, address: "A")
         c.beginHandshake(sessionID: id)
@@ -65,7 +80,7 @@ final class SonyHeadphonesControllerTests: XCTestCase {
         XCTAssertTrue(c.lastErrorMessage?.contains("timed out") == true)
         let second = c.replaceSession(model: .whXM6, address: "A")
         c.beginHandshake(sessionID: second)
-        c.handleIncomingPayload([1, 0, 0, 0, 0, 3, 0, 1], sessionID: second)
+        c.handleIncomingPayload([1, 0, 0, 0, 0, 3, 1, 1], sessionID: second)
         XCTAssertTrue(c.lastErrorMessage?.contains("Unsupported") == true)
     }
     func testConnectedCandidateAndSessionReplacementClearOldState() {

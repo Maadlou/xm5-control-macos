@@ -1,6 +1,6 @@
 # XM6 protocol evidence
 
-Inspected 2026-10-27. Scope: implementation tasks 1-7. No local hardware capture or XM6 compatibility verification has occurred.
+Inspected 2026-10-27. Scope: implementation tasks 1-7 and the subsequent live connection fix. A WH-1000XM6 firmware 3.1.5 protocol-info reply was captured locally; full ANC/EQ hardware acceptance remains pending.
 
 ## Pinned references
 
@@ -13,7 +13,7 @@ Inspected 2026-10-27. Scope: implementation tasks 1-7. No local hardware capture
 | Feature | Evidence and decision |
 |---|---|
 | Transport | Existing Serial HPC UUID `956C7B26-D49A-4BA8-B03F-B17D393CB6E2` is the XM6 reference's first UUID. Keep it unchanged. Its second, older UUID and conflicting README reports elsewhere do not justify a new fallback without local SDP evidence. |
-| Handshake | Query `00 00`. Table-1 return: `01 00`, big-endian UInt32 protocol version, then table-1/table-2 enable bytes (0 = enabled, 1 = disabled). Validate eight-byte layout; expose version and table flags without assuming an unknown version is supported. Session integration/timeout remains Task 5. |
+| Handshake | Query `00 00`. Table-1 return: `01 00`, big-endian UInt32 protocol version, then table-1/table-2 enable bytes (0 = enabled, 1 = disabled). Validate the eight-byte layout and table flags. The four-byte revision is opaque and must not be compared to the integer family number 2. Require table 1, then validate advertised functions and known response layouts before enabling controls. |
 | Functions | Query `06 00`; return `07 00 count`, followed by `count` pairs of function ID and priority. Reject truncated lists. Retain IDs; priority is not a capability ID. |
 | ANC | Preserve existing preference order `(6D,19), (6B,17), (68,15), (67,22), (66,21)` for function/type. Note `66` advertises ambient on/off and `67` ambient levels: only the latter justifies level/voice controls. Other advertised function families are not implicitly supported. |
 | ANC type 19 | Nine-byte response: command, type, change-status, total-effect, NC/ambient mode, voice, level, adaptive-enabled, sensitivity. The XM6 reference also handles eight-byte responses omitting change-status. Decode explicit offsets for each and preserve both adaptive bytes in writes. Other existing variants keep their current write layout. |
@@ -27,7 +27,7 @@ XM5 optional battery/EQ defaults are intentionally retained when metadata is abs
 
 ## Fixtures and verification
 
-All added packet fixtures are constructed from the pinned definitions above, not captured locally. XM5 exact byte assertions and literal pre-migration JSON are characterization fixtures for existing application behavior. New tests must distinguish those from reference-derived XM6 fixtures.
+The original fixtures were constructed from the pinned definitions above. The protocol-info payload documented in the live investigation below was captured locally and is explicitly identified in its regression tests. Other packets in those tests remain constructed fixtures. XM5 exact byte assertions and literal pre-migration JSON are characterization fixtures for existing application behavior. New tests must distinguish those from reference-derived XM6 fixtures.
 
 - Baseline before changes: 7 unit tests passed, zero failures (Xcode 27.1).
 - Characterization: all XM5 factory IDs, six-value EQ encoding/clamping/round-trip, and literal saved draft/profile JSON.
@@ -85,3 +85,27 @@ Final results after these fixes:
 - The regression cases include delayed A/B/A EQ and noise responses, manual/poll query ownership, missing-reply resynchronization, Custom without band values, dirty-draft preservation after an unrelated noise edit, and deliberate Sync adoption.
 
 Hardware acceptance remains pending. The original RFCOMM framing/ACK transport was retained; Bluetooth delivery, firmware-specific behavior, SDP publication, sleep/reconnect behavior, and multipoint interaction still require the user-run checklist. No publishing or release distribution was performed.
+
+## Live WH-1000XM6 connection investigation
+
+Device: WH-1000XM6, firmware 3.1.5, observed locally on 2026-10-27. Bluetooth audio was connected and the Sony control channel opened, but the app rejected the protocol reply before requesting supported functions.
+
+Captured protocol-info payload:
+
+```text
+01 00 03 00 30 32 00 00
+```
+
+The codec correctly decoded revision `0x03003032` (decimal 50343986) and enabled command tables. The controller incorrectly required the revision to equal literal `2`, confusing the protocol family with the revision field. The [pinned reference initialization and handler](https://github.com/mos9527/SonyHeadphonesClient/blob/d718306167c3281f2836a88895723ad4a19b87f9/libmdr/src/HeadphonesV2.cpp) stores the revision and gates initialization on table-1 support instead.
+
+The fix retains the revision for diagnostics, requires table 1, and continues validating functions and known payload layouts. Missing/malformed handshakes and disabled table 1 still fail. XM6 DEBUG scenarios now use the captured reply rather than an invented literal version 2.
+
+Verification:
+
+- The captured controller regression failed before the fix and passed afterward.
+- 48 unit tests and 15 UI tests passed: `/tmp/xm5-xm6-live-handshake-green.log`.
+- Corrected Release build passed: `/tmp/xm5-xm6-handshake-fixed-build.log`.
+- The independently identified corrected Release process logged the captured revision and then `Sony controls ready; model=whXM6, mode=ambient`: `/tmp/xm5-xm6-fixed-live.log`.
+- This confirms real-device handshake completion and noise-state readback. No ANC/EQ setter was used to verify this connection fix. Audio continuity, battery/charging accuracy, EQ reads/writes, and the rest of the manual checklist are not implied to pass.
+
+A narrow independent code review found no Critical or Important issues in this fix.
