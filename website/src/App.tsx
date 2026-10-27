@@ -208,12 +208,12 @@ function Hero() {
               margin: '0 0 22px',
             }}
           >
-            Your XM5s.
+            Your Sony headphones.
             <br />
             Finally at home on Mac.
           </h1>
           <p style={{ fontSize: 16.5, lineHeight: 1.65, color: '#6a6460', margin: '0 0 36px', maxWidth: 400 }}>
-            Noise cancellation, ambient sound and EQ — right from your menu bar. No phone required.
+            Noise cancellation, ambient sound and EQ, right from your menu bar. No phone required.
           </p>
           <div style={{ display: 'flex', gap: 11, flexWrap: 'wrap' }}>
           <a
@@ -505,10 +505,10 @@ function Footer() {
           Download XM5 Control
         </a>
         <div style={{ marginTop: 18, fontSize: 11.5, color: '#3a3733', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-          Free · Sony WH-1000XM5 · macOS 13+
+          Free · XM5 release · macOS 14+
         </div>
         <p style={{ margin: '12px 0 0', fontSize: 12, lineHeight: 1.5, color: '#8a8480' }}>
-          Open source. Built because I needed it myself.
+          Open source. Built because I needed it myself. WH-1000XM6 support is in development and awaiting hardware verification; the v0.1.0 download remains the XM5 release.
         </p>
       </div>
 

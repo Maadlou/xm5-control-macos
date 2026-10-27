@@ -1,6 +1,6 @@
 # XM6 protocol evidence
 
-Inspected 2026-10-27. Scope: implementation tasks 1–4. No local hardware capture or XM6 compatibility verification has occurred.
+Inspected 2026-10-27. Scope: implementation tasks 1-7. No local hardware capture or XM6 compatibility verification has occurred.
 
 ## Pinned references
 
@@ -52,3 +52,18 @@ Logs and result bundles from this implementation run:
 | Release | `/tmp/xm5-xm6-release-build.log` |
 
 Temporary logs may expire. No local headphone result is implied by these automated checks.
+
+## Tasks 5-7 implementation verification
+
+Live discovery now uses the connected-first, stable-device policy. Each control session owns a UUID, stream, sequence, timers, negotiated capabilities, and confirmed state. Replacing a session cancels delayed writes/readbacks/retries and ignores callbacks from other channels. Opening and handshake phases time out after 8 seconds. Interactive writes retain the final debounced request, query after 250 ms, and fail after 3 seconds without matching readback. Notifications update confirmed state, but do not alone complete a pending write.
+
+Noise control remains available when EQ is unadvertised, has an unsupported layout, or never responds to the initial query. The editor and both profile pickers use the negotiated layout. Offline editing uses an explicitly labelled layout, and switching simulated generations while the editor is open is covered by UI tests. DEBUG fixtures never open the physical control link; hosted unit tests use isolated preferences.
+
+- Final combined suite: 42 unit tests and 13 UI tests, zero failures in `/tmp/xm5-xm6-final-tests.log`.
+- The previous UI query failures were corrected using observed macOS accessibility roles and stable identifiers. The original six XM5 UI checks now pass alongside the new scenarios.
+- Both profile pickers exclude incompatible curves. The XM6 last band is reachable by scrolling and adjusts to +6 through XCTest's native slider action.
+- Simulated XM6 editor visually inspected from a test recording: all ten labels/sliders fit correctly, with saved profiles below in the scroll view. DEBUG model-switch buttons are excluded from ordinary app use and Release builds.
+- Landing page: locked existing dependencies installed with pnpm 10.34.3; Vite production build passed (`/tmp/xm5-xm6-website-build.log`). No dependency or lockfile changes were made.
+- Release configuration verification is recorded in `/tmp/xm5-xm6-final-release.log`.
+
+These are automated/simulated results. WH-1000XM5 regression acceptance, WH-1000XM6 device/firmware verification, and mixed-device hardware acceptance remain Pending in the manual checklist. No release is marked hardware-verified by this change.
