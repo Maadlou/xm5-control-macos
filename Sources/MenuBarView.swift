@@ -378,10 +378,14 @@ struct MenuBarView: View {
     }
 
     private var headphoneArtwork: Image {
-        if headphones.model == .whXM5 || headphones.model == .wfXM5 || headphones.model == .legacyXM5 {
+        switch headphones.model {
+        case .whXM6:
+            return Image("XM6Hero")
+        case .whXM5, .wfXM5, .legacyXM5:
             return Image("XM5Hero")
+        case nil:
+            return Image(systemName: "headphones")
         }
-        return Image(systemName: "headphones")
     }
 
     private var dashboard: some View {

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="decision-record-id" content="xm6-compatibility"><meta name="decision-topic" content="xm6-compatibility">
+<meta name="decision-branch" content="xm6-compatibility-v0"><meta name="decision-pr" content="none">
+<meta name="decision-source-commit" content="153624197ccf1bbbaf52a99cf1e20c69aeb37b10">
+<title>XM5 and XM6 compatibility decisions</title>
+<style>
+    :root { color-scheme:light; --ink:#273536; --muted:#536364; --line:#d7dfdb; --accent:#3e635b; --soft:#eef3ef; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:#f8f9f6; color:var(--ink); font:16px/1.65 system-ui,sans-serif; }
+    main { max-width:920px; margin:0 auto; padding:48px 28px; }
+    header { padding-bottom:24px; border-bottom:1px solid var(--line); }
+    h1 { font-size:clamp(1.8rem,4vw,2.5rem); line-height:1.2; letter-spacing:-.035em; margin:10px 0 18px; }
+    h2 { font-size:1.2rem; margin:30px 0 12px; }
+    h3 { font-size:1rem; margin:0 0 8px; }
+    p { margin:8px 0 12px; }
+    .eyebrow,.meta { color:var(--muted); font-size:.85rem; }
+    .eyebrow { text-transform:uppercase; letter-spacing:.1em; }
+    .card { background:white; border:1px solid var(--line); border-radius:12px; padding:20px; margin:12px 0; }
+    .status { color:var(--accent); background:var(--soft); border:1px solid var(--line); padding:2px 8px; border-radius:5px; font-size:.8rem; white-space:nowrap; }
+    figure { margin:12px 0; padding:20px 12px; background:var(--soft); border:1px solid var(--line); border-radius:12px; }
+    svg { display:block; width:100%; height:auto; }
+    svg text { font:16px system-ui,sans-serif; fill:var(--ink); }
+    figcaption { color:var(--muted); font-size:.85rem; padding:12px 8px 0; }
+    li { margin:6px 0; }
+    a { color:#315e76; text-underline-offset:3px; overflow-wrap:anywhere; }
+    code { font-size:.9em; overflow-wrap:anywhere; }
+    @media(max-width:540px) { main { padding:26px 16px; } .card { padding:16px; } figure { padding:12px 4px; } }
+    @media print { body { background:white; font-size:11pt; } main { max-width:none; padding:0; } .card,figure { break-inside:avoid; } }
+  </style></head><body><main>
+<header><div class="eyebrow">XM5 and XM6 compatibility</div><h1>Keep device layouts, local drafts, and confirmed state separate</h1>
+<p>Tasks 1-7 are implemented. Connection and noise-state readback were observed on XM6 firmware 3.1.5; full real-device acceptance remains pending.</p>
+<div class="meta">Created: 2026-10-27 · Updated: 2026-10-27 · PR: None · Branch: xm6-compatibility-v0</div></header>
+<section><h2>Context and outcome</h2><p>Discovery alone could not extend this app to XM6. The old EQ model always emitted six values.
+The user requires existing XM5 controls and saved profiles to keep working.</p>
+<p>The implementation adds negotiated device capabilities, separate EQ formats, safe sessions, and model-aware views.
+It preserves the app identity, preference domain, keyboard shortcut, original XM5 packet values, and legacy profile backups.
+Hardware compatibility is not inferred from simulated tests.</p></section>
+<section><h2>Architecture and operation</h2><figure>
+<svg viewBox="0 0 840 320" role="img" aria-labelledby="diagram-title diagram-desc">
+<title id="diagram-title">Implemented device control and storage boundaries</title>
+<desc id="diagram-desc">Model metadata feeds the session controller. Views exchange actions and state with it, and keep drafts and profiles in versioned storage. The controller builds and decodes payloads through command codecs and communicates through the retained RFCOMM frame transport.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#617a72"/></marker></defs>
+<g fill="white" stroke="#b8c9c0" stroke-width="1.5">
+<rect x="20" y="35" width="230" height="70" rx="9"/><rect x="305" y="35" width="230" height="70" rx="9"/>
+<rect x="590" y="35" width="230" height="70" rx="9"/><rect x="20" y="180" width="230" height="70" rx="9"/>
+<rect x="305" y="180" width="230" height="70" rx="9"/><rect x="590" y="180" width="230" height="70" rx="9"/>
+</g><g text-anchor="middle">
+<text x="135" y="64">Model / capabilities</text><text x="135" y="88">Table and capability gates</text>
+<text x="420" y="64">Controller / session</text><text x="420" y="88">Confirmed and pending</text>
+<text x="705" y="64">RFCOMM / frame codec</text><text x="705" y="88">Existing transport retained</text>
+<text x="135" y="210">Layout-aware views</text><text x="135" y="234">Controls and local drafts</text>
+<text x="420" y="210">Versioned EQ store</text><text x="420" y="234">Profiles and legacy backups</text>
+<text x="705" y="210">Command codecs</text><text x="705" y="234">Validate and encode values</text>
+<text x="275" y="24">Metadata</text><text x="563" y="24">Frames</text>
+<text x="240" y="130">Actions / state</text><text x="650" y="140">Build / decode</text><text x="275" y="169">Drafts</text>
+</g><g fill="none" stroke="#617a72" stroke-width="2" marker-end="url(#arrow)">
+<path d="M250 70H295"/><path d="M545 70H580" marker-start="url(#arrow)"/>
+<path d="M135 170V145H360V115" marker-start="url(#arrow)"/>
+<path d="M520 115V150H705V170" marker-start="url(#arrow)"/>
+<path d="M260 215H295" marker-start="url(#arrow)"/>
+</g><text x="20" y="290">XM6 connection/read verified; full XM5/XM6 hardware acceptance pending.</text>
+</svg><figcaption>Session boundaries isolate old callbacks and timers. Query ownership isolates old replies.</figcaption></figure>
+<ol><li>Discovery selects a supported connected device, then checks command-table support and advertised functions. The revision remains diagnostic metadata.</li>
+<li>The view edits a draft for the active layout. The controller validates and debounces the write.</li>
+<li>A matching response to that operation's query confirms the device state. An ACK does not.</li>
+<li>Profiles remain local and layout-specific. Legacy records import once while original data stays unchanged.</li></ol></section>
+<section><h2>Decisions and reasons</h2>
+<div class="card" id="d1"><h3>D1 · Accepted: separate specifications</h3><p>XM5 keeps Clear Bass plus five bands, range -10...10, and offset +10.
+XM6 uses ten bands, range -6...6, and offset +6. A broader name filter alone would emit incompatible packets.
+The cost is explicit metadata and separate validation.</p></div>
+<div class="card" id="d2"><h3>D2 · Accepted: conservative capabilities</h3><p>XM6 needs known advertised feature families. XM5 retains existing optional defaults.
+Model-name assumptions could enable unsupported writes. Unsupported EQ therefore leaves working noise controls available. The cost is limited support for unknown feature families.</p></div>
+<div class="card" id="d3"><h3>D3 · Accepted: new storage key and raw backups</h3><p>Version 2 keys drafts and profiles by layout instead of rewriting legacy storage.
+Records recover independently. Damaged or unknown-version version 2 data becomes read-only.
+The cost is explicit recovery before disk saves; in-memory draft edits still work.</p></div>
+<div class="card" id="d4"><h3>D4 · Accepted implementation choice: optional save result</h3><p>The planned unconditional profile return could imply success for blocked saves.
+Saving returns nil on failure, and the editor reports storage errors. Callers must handle failure explicitly.</p></div>
+<div class="card" id="d5"><h3>D5 · Accepted: own each query response</h3><p>A readback-issued boolean let an old A response confirm a newer A request after an intervening B write.
+One outstanding query per feature retains its owner across edits, including manual and poll queries.
+Missing replies require fresh-session Sync rather than ticket reassignment. The cost is serialization and an explicit resync after ambiguity.</p></div>
+<div class="card" id="d6"><h3>D6 · Accepted: retain local intent and reported evidence</h3><p>Automatic adoption after timeout erased failed drafts. Dirty layouts now retain edits through failures and unrelated actions.
+Successful confirmation or explicit EQ Sync adopts device values. A preset-only Custom response cannot establish a curve or display Synced.
+The cost is separate draft, pending, and reported-curve state.</p></div><div class="card" id="d7"><h3>D7 · Accepted correction: separate family and opaque revision</h3><p>The real headset returned revision 0x03003032 with table 1 enabled. Requiring literal 2 rejected a valid connection.
+The controller now requires the advertised table and validated capabilities, as the reference client does. Diagnostics retain the raw revision.
+The captured reply is a regression fixture. The cost is relying on table and payload contracts rather than a misleading numeric-family comparison.</p></div></section>
+<section><h2>Evidence and limits</h2><p>At commit <code>1536241</code>, the connection-fix suite passed 48 unit tests and 15 UI tests. The corrected Release build passed.
+The website production build passed earlier in this implementation.
+The Release signature verified, with macOS 14.0 minimum and the existing bundle identifier.
+Independent review found three Important state defects; regression tests reproduced each before the fixes.</p>
+<ul><li><a href="../Sources/SonyHeadphonesController.swift">Session and query ownership</a></li>
+<li><a href="../Sources/EqualizerEditorView.swift">Draft and confirmation presentation</a></li>
+<li><a href="../Sources/SettingsStore.swift">Storage and legacy migration</a></li>
+<li><a href="../docs/testing/xm6-protocol-evidence.md">Pinned references and observed verification</a></li>
+<li><a href="../docs/testing/xm5-xm6-manual-checklist.md">Pending manual acceptance</a></li></ul>
+<p>Simulated ten-band layout was visually checked. This HTML's structure and links were checked; its browser rendering was not checked.
+The corrected Release reached ready state on the physical XM6, firmware 3.1.5, and read Ambient mode.
+This verifies the handshake and a state read. It does not establish ANC/EQ write acceptance or XM5 hardware regression results.
+Both models still need the manual checklist, including sleep/reconnect and multipoint. No release was published.</p></section>
+</main></body></html>
