@@ -115,6 +115,13 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
         return { task.cancel() }
     }
     #if DEBUG
+    enum SimulatedScenario: String {
+        case xm5, xm6
+        case xm6WithoutEQ = "xm6-no-eq"
+        case disconnectedXM5 = "disconnected-xm5"
+        case xm6RejectWrites = "xm6-reject-writes"
+    }
+    private var simulationScenario: SimulatedScenario = .xm5
     private var simulatedModel: SonyHeadphoneModel?
     private var simulatedNoise: [UInt8] = []
     private var simulatedEQ: [UInt8] = []
@@ -129,7 +136,7 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
     init(startAutomatically: Bool = true, simulatedReady: Bool = false) {
         super.init()
         #if DEBUG
-        if simulatedReady { configureSimulation(model: .whXM5); return }
+        if simulatedReady { useSimulation(.xm5); return }
         #endif
         guard startAutomatically else { linkState = .disconnected; return }
         refresh()
@@ -137,6 +144,13 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
             Task { @MainActor in self?.poll() }
         }
     }
+
+    #if DEBUG
+    convenience init(startAutomatically: Bool = false, simulatedScenario: SimulatedScenario?) {
+        self.init(startAutomatically: simulatedScenario == nil && startAutomatically)
+        if let simulatedScenario { useSimulation(simulatedScenario) }
+    }
+    #endif
 
     // All scheduled actions carry session and operation identities, even if cancellation races.
     private func later(_ key: String, after delay: TimeInterval, _ action: @escaping @MainActor () -> Void) {
@@ -507,9 +521,12 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
     }
 
     #if DEBUG
-    private func configureSimulation(model: SonyHeadphoneModel) {
+    func useSimulation(_ scenario: SimulatedScenario) {
+        simulationScenario = scenario
+        let model: SonyHeadphoneModel = (scenario == .xm5 || scenario == .disconnectedXM5) ? .whXM5 : .whXM6
         simulatedModel = model
-        let id = replaceSession(model: model, address: "00:00:00:00:00:01")
+        let id = replaceSession(model: model, address: model == .whXM5 ? "00:00:00:00:00:05" : "00:00:00:00:00:06")
+        if scenario == .disconnectedXM5 { lastKnownEqualizerLayout = .xm5SixValue; return }
         simulatedNoise = [0x67, 0x19, 1, 1, 1, 0, 12, 0, 0]
         let spec: EqualizerSpecification = model == .whXM6 ? .xm6 : .xm5
         simulatedEQ = [0x57, 0, model == .whXM6 ? 0x30 : 0x16, UInt8(spec.valueCount)] + Array(repeating: UInt8(spec.wireOffset), count: spec.valueCount)
@@ -520,12 +537,17 @@ final class SonyHeadphonesController: NSObject, ObservableObject {
         let response: [UInt8]
         switch command {
         case 0: response = [1,0,0,0,0,2,0,1]
-        case 6: response = [7,0,3,0x6D,0,0x20,0,0x57,0]
+        case 6:
+            response = simulationScenario == .xm6WithoutEQ
+                ? [7,0,2,0x6D,0,0x20,0] : [7,0,3,0x6D,0,0x20,0,0x57,0]
         case 0x66: response = simulatedNoise
-        case 0x68: simulatedNoise = [0x67] + payload.dropFirst(); return
+        case 0x68:
+            if simulationScenario != .xm6RejectWrites { simulatedNoise = [0x67] + payload.dropFirst() }
+            return
         case 0x22: response = [0x23,0,78,0]
         case 0x56: response = simulatedEQ
         case 0x58:
+            guard simulationScenario != .xm6RejectWrites else { return }
             if payload.count > 4 { simulatedEQ = [0x57] + payload.dropFirst() }
             else { simulatedEQ[2] = payload[2] }
             return

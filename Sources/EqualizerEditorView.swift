@@ -5,6 +5,21 @@ struct EqualizerEditorView: View {
     @EnvironmentObject private var settings: SettingsStore
     @Environment(\.dismiss) private var dismiss
     @State private var profileName = ""
+    @State private var offlineLayout: EqualizerLayoutID = .xm5SixValue
+
+    private var isConnecting: Bool { headphones.linkState == .opening || headphones.linkState == .handshaking }
+    private var specification: EqualizerSpecification? {
+        if headphones.isReady { return headphones.equalizerSpecification }
+        return isConnecting ? nil : offlineLayout.specification
+    }
+    private var canApplyLive: Bool { headphones.isReady && headphones.equalizerSpecification != nil }
+    private var confirmationText: String {
+        if !canApplyLive { return "Offline editing" }
+        if headphones.isApplyingChange { return "Applying…" }
+        if headphones.lastErrorMessage != nil { return "Not confirmed" }
+        guard let specification else { return "Unavailable" }
+        return headphones.equalizerPreset?.rawValue == 0xA0 && settings.equalizerDraft(for: specification.id) == headphones.customEqualizer ? "Synced" : "Draft"
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -12,11 +27,27 @@ struct EqualizerEditorView: View {
             Divider().opacity(0.55)
             ScrollView {
                 VStack(spacing: 16) {
-                    curvePreview
-                    controls
-                    savedProfiles
-                }
-                .padding(20)
+                    if !headphones.isReady && !isConnecting {
+                        Picker("Offline EQ layout", selection: $offlineLayout) {
+                            Text("XM5: five bands + Clear Bass").tag(EqualizerLayoutID.xm5SixValue)
+                            Text("XM6: ten bands").tag(EqualizerLayoutID.xm6TenBand)
+                        }
+                        .accessibilityIdentifier("equalizer.offlineLayout")
+                    }
+                    if let specification {
+                        curvePreview(specification)
+                        controls(specification).id(specification.id)
+                        savedProfiles(specification)
+                    } else {
+                        Text(headphones.equalizerUnavailableReason ?? "Waiting for the headphone controls…")
+                            .foregroundStyle(.secondary)
+                            .accessibilityIdentifier("equalizer.unavailable")
+                    }
+                    if let error = headphones.lastErrorMessage {
+                        Text(error).font(.caption).foregroundStyle(.orange)
+                            .accessibilityIdentifier("equalizer.commandError")
+                    }
+                }.padding(20)
             }
             Divider().opacity(0.55)
             footer
@@ -24,232 +55,163 @@ struct EqualizerEditorView: View {
         .frame(width: 430, height: 590)
         .background(.ultraThinMaterial)
         .onAppear {
-            if headphones.equalizerPreset == .manual {
-                settings.setEqualizerDraft(headphones.customEqualizer)
-            }
+            offlineLayout = headphones.lastKnownEqualizerLayout ?? .xm5SixValue
+            syncReportedDraft()
         }
+        .onChange(of: headphones.equalizerSpecification?.id) { _, _ in syncReportedDraft() }
+        .onChange(of: headphones.customEqualizer) { _, _ in syncReportedDraft() }
+        .onChange(of: headphones.pendingEqualizer) { _, _ in syncReportedDraft() }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("equalizer.editor")
     }
-
+    private func syncReportedDraft() {
+        guard let specification = headphones.equalizerSpecification,
+              headphones.equalizerPreset?.rawValue == 0xA0, headphones.pendingEqualizer == nil,
+              headphones.customEqualizer.layout == specification.id else { return }
+        settings.setEqualizerDraft(headphones.customEqualizer)
+    }
     private var header: some View {
         HStack(spacing: 12) {
             Image(systemName: "waveform.path.ecg")
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundStyle(.tint)
+                .font(.system(size: 20, weight: .semibold)).foregroundStyle(.tint)
                 .frame(width: 38, height: 38)
-                .background(Color.accentColor.opacity(0.14), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                .background(Color.accentColor.opacity(0.14), in: RoundedRectangle(cornerRadius: 11))
             VStack(alignment: .leading, spacing: 2) {
-                Text("Custom Equalizer")
-                    .font(.system(size: 17, weight: .semibold, design: .rounded))
-                Text(headphones.isReady ? "Changes apply live to your XM5" : "Edit and save while disconnected")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
+                Text("Custom Equalizer").font(.system(size: 17, weight: .semibold, design: .rounded))
+                Text(canApplyLive ? "Changes apply live to \(headphones.deviceName)" : "Edit and save while disconnected")
+                    .font(.system(size: 11)).foregroundStyle(.secondary)
             }
             Spacer()
-            Button { headphones.refreshEqualizer() } label: {
-                Image(systemName: "arrow.clockwise")
-            }
-            .buttonStyle(.borderless)
-            .disabled(!headphones.isReady)
-            .help("Read the current EQ from the headphones")
-            .accessibilityLabel("Sync equalizer from headphones")
+            Button { headphones.refreshEqualizer() } label: { Image(systemName: "arrow.clockwise") }
+                .buttonStyle(.borderless).disabled(!canApplyLive)
+                .accessibilityLabel("Sync equalizer from headphones")
             Button { dismiss() } label: { Image(systemName: "xmark.circle.fill") }
-                .buttonStyle(.borderless)
-                .font(.system(size: 18))
-                .foregroundStyle(.secondary)
+                .buttonStyle(.borderless).font(.system(size: 18)).foregroundStyle(.secondary)
                 .accessibilityLabel("Close equalizer editor")
-        }
-        .padding(18)
+        }.padding(18)
     }
-
-    private var curvePreview: some View {
+    private func curvePreview(_ specification: EqualizerSpecification) -> some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.primary.opacity(0.05))
-            VStack(spacing: 0) {
-                Spacer()
-                Divider().opacity(0.28)
-                Spacer()
-            }
-            EqualizerCurve(values: settings.equalizerDraft(for: .xm5SixValue).bands)
-                .stroke(
-                    LinearGradient(colors: [.cyan, .blue, .purple], startPoint: .leading, endPoint: .trailing),
-                    style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round)
-                )
-                .padding(.horizontal, 22)
-                .padding(.vertical, 15)
-                .shadow(color: .blue.opacity(0.25), radius: 8)
-        }
-        .frame(height: 92)
-        .accessibilityHidden(true)
+            RoundedRectangle(cornerRadius: 16).fill(Color.primary.opacity(0.05))
+            Divider().opacity(0.28)
+            EqualizerCurve(values: settings.equalizerDraft(for: specification.id).bands, gainLimit: specification.gainRange.upperBound)
+                .stroke(LinearGradient(colors: [.cyan, .blue, .purple], startPoint: .leading, endPoint: .trailing),
+                        style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
+                .padding(.horizontal, 22).padding(.vertical, 15)
+        }.frame(height: 92).accessibilityHidden(true)
     }
-
-    private var controls: some View {
+    private func controls(_ specification: EqualizerSpecification) -> some View {
         VStack(spacing: 13) {
-            equalizerRow(title: "Clear Bass", symbol: "speaker.wave.3.fill", value: clearBassBinding)
-            Divider().opacity(0.45)
-            ForEach(EqualizerSettings.bandLabels.indices, id: \.self) { index in
-                equalizerRow(
-                    title: EqualizerSettings.bandLabels[index],
-                    symbol: "waveform",
-                    value: bandBinding(index)
-                )
+            if specification.hasClearBass {
+                equalizerRow(title: "Clear Bass", identifier: "Clear Bass", specification: specification, band: nil)
+                Divider().opacity(0.45)
             }
-        }
-        .padding(15)
-        .background(Color.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            ForEach(specification.bandLabels.indices, id: \.self) { index in
+                equalizerRow(title: specification.bandLabels[index], identifier: "equalizer.band.\(specification.id.rawValue).\(index)",
+                             specification: specification, band: index)
+            }
+        }.padding(15)
+            .background(Color.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 16))
     }
-
-    private func equalizerRow(title: String, symbol: String, value: Binding<Double>) -> some View {
-        HStack(spacing: 10) {
-            Label(title, systemImage: symbol)
-                .font(.system(size: 11, weight: .medium))
-                .frame(width: 92, alignment: .leading)
-            Slider(value: value, in: -10...10, step: 1)
-            Text(signed(Int(value.wrappedValue)))
-                .font(.system(size: 11, weight: .semibold, design: .rounded))
-                .monospacedDigit()
-                .foregroundStyle(value.wrappedValue == 0 ? Color.secondary : Color.primary)
-                .frame(width: 30)
+    private func valueBinding(_ specification: EqualizerSpecification, band: Int?) -> Binding<Double> {
+        Binding(get: {
+            let draft = settings.equalizerDraft(for: specification.id)
+            return Double(band.map { draft.bands[$0] } ?? draft.clearBass ?? 0)
+        }, set: { value in
+            // A slider being removed during a model change must not write into the new layout.
+            guard self.specification?.id == specification.id else { return }
+            var draft = settings.equalizerDraft(for: specification.id)
+            if let band { draft[band: band] = Int(value.rounded()) }
+            else { draft.clearBass = max(specification.gainRange.lowerBound, min(specification.gainRange.upperBound, Int(value.rounded()))) }
+            apply(draft)
+        })
+    }
+    private func equalizerRow(title: String, identifier: String, specification: EqualizerSpecification, band: Int?) -> some View {
+        let binding = valueBinding(specification, band: band)
+        return HStack(spacing: 10) {
+            Label(title, systemImage: band == nil ? "speaker.wave.3.fill" : "waveform")
+                .font(.system(size: 11, weight: .medium)).frame(width: 92, alignment: .leading)
+            Slider(value: binding, in: Double(specification.gainRange.lowerBound)...Double(specification.gainRange.upperBound), step: 1)
+                .accessibilityLabel(title).accessibilityValue(signed(Int(binding.wrappedValue)))
+                .accessibilityIdentifier(identifier)
+            Text(signed(Int(binding.wrappedValue))).font(.system(size: 11, weight: .semibold, design: .rounded))
+                .monospacedDigit().frame(width: 30).accessibilityHidden(true)
         }
     }
-
-    @ViewBuilder
-    private var savedProfiles: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("MAC PRESETS")
-                .font(.system(size: 10, weight: .bold))
-                .foregroundStyle(.secondary)
-                .tracking(0.7)
-
+    private func savedProfiles(_ specification: EqualizerSpecification) -> some View {
+        let profiles = settings.compatibleEqualizerProfiles(for: specification.id)
+        return VStack(alignment: .leading, spacing: 10) {
+            Text("MAC PRESETS").font(.system(size: 10, weight: .bold)).foregroundStyle(.secondary).tracking(0.7)
             HStack(spacing: 8) {
-                TextField("Preset name", text: $profileName)
-                    .textFieldStyle(.roundedBorder)
-                    .onSubmit(saveProfile)
-                Button("Save") { saveProfile() }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(!settings.canSaveEqualizerChanges)
+                TextField("Preset name", text: $profileName).textFieldStyle(.roundedBorder).onSubmit(saveProfile)
+                Button("Save", action: saveProfile).buttonStyle(.borderedProminent).disabled(!settings.canSaveEqualizerChanges)
             }
-
             if let error = settings.equalizerStorageError {
-                Text(error)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.orange)
-                    .accessibilityIdentifier("equalizer.storageError")
+                Text(error).font(.system(size: 11)).foregroundStyle(.orange).accessibilityIdentifier("equalizer.storageError")
             }
-
-            if settings.compatibleEqualizerProfiles(for: .xm5SixValue).isEmpty {
-                Text("Saved on this Mac. Applying one writes its curve to the headphones, where Sound Connect can read the active Manual EQ.")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 4)
+            if profiles.isEmpty {
+                Text("Saved on this Mac for this EQ layout. Applying a profile sends its curve to the headphones.")
+                    .font(.system(size: 11)).foregroundStyle(.secondary)
             } else {
-                VStack(spacing: 6) {
-                    ForEach(settings.compatibleEqualizerProfiles(for: .xm5SixValue)) { profile in
-                        HStack {
-                            Button {
-                                apply(profile.settings)
-                            } label: {
-                                Label(profile.name, systemImage: "play.fill")
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                            }
-                            .buttonStyle(.plain)
-                            Button {
-                                settings.deleteEqualizerProfile(id: profile.id)
-                            } label: {
-                                Image(systemName: "trash")
-                            }
-                            .buttonStyle(.borderless)
-                            .foregroundStyle(.secondary)
-                            .accessibilityLabel("Delete \(profile.name)")
-                        }
-                        .padding(.horizontal, 11)
-                        .frame(height: 32)
-                        .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
-                    }
+                ForEach(profiles) { profile in
+                    HStack {
+                        Button { apply(profile.settings) } label: {
+                            Label(profile.name, systemImage: "play.fill").frame(maxWidth: .infinity, alignment: .leading)
+                        }.buttonStyle(.plain)
+                        Button { settings.deleteEqualizerProfile(id: profile.id) } label: { Image(systemName: "trash") }
+                            .buttonStyle(.borderless).foregroundStyle(.secondary)
+                            .disabled(!settings.canSaveEqualizerChanges).accessibilityLabel("Delete \(profile.name)")
+                    }.padding(.horizontal, 11).frame(height: 32)
+                        .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 9))
                 }
             }
         }
     }
-
     private var footer: some View {
         HStack {
-            Button("Reset Flat") { apply(.flat) }
-                .buttonStyle(.borderless)
+            Button("Reset Flat") {
+                if let specification { apply(.flat(for: specification.id)) }
+            }.buttonStyle(.borderless).disabled(specification == nil)
             Spacer()
-            if headphones.isApplyingChange {
-                ProgressView().controlSize(.small)
-            } else {
-                Label(headphones.isReady ? "Live" : "Offline", systemImage: headphones.isReady ? "checkmark.circle.fill" : "icloud.slash")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(headphones.isReady ? Color.green : Color.secondary)
+            #if DEBUG
+            if CommandLine.arguments.contains("-ui-testing") && CommandLine.arguments.contains("--ui-test-host") {
+                Button("XM5") { headphones.useSimulation(.xm5) }.accessibilityIdentifier("simulation.switch.xm5")
+                Button("XM6") { headphones.useSimulation(.xm6) }.accessibilityIdentifier("simulation.switch.xm6")
             }
-        }
-        .padding(.horizontal, 20)
-        .frame(height: 48)
+            #endif
+            if headphones.isApplyingChange { ProgressView().controlSize(.small).accessibilityLabel("Applying equalizer") }
+            Text(confirmationText).font(.system(size: 10, weight: .medium))
+                .foregroundStyle(headphones.lastErrorMessage == nil ? Color.secondary : .orange)
+                .accessibilityIdentifier("equalizer.confirmation")
+        }.padding(.horizontal, 20).frame(height: 48)
     }
-
-    private var clearBassBinding: Binding<Double> {
-        Binding(
-            get: { Double(settings.equalizerDraft(for: .xm5SixValue).clearBass ?? 0) },
-            set: { value in
-                var draft = settings.equalizerDraft(for: .xm5SixValue)
-                draft.clearBass = max(-10, min(10, Int(value.rounded())))
-                apply(draft)
-            }
-        )
-    }
-
-    private func bandBinding(_ index: Int) -> Binding<Double> {
-        Binding(
-            get: { Double(settings.equalizerDraft(for: .xm5SixValue)[band: index]) },
-            set: { value in
-                var draft = settings.equalizerDraft(for: .xm5SixValue)
-                draft[band: index] = Int(value.rounded())
-                apply(draft)
-            }
-        )
-    }
-
     private func apply(_ equalizer: EqualizerSettings) {
+        guard specification?.id == equalizer.layout else { return }
         settings.setEqualizerDraft(equalizer)
-        headphones.setCustomEqualizer(equalizer)
+        if canApplyLive { headphones.setCustomEqualizer(equalizer) }
     }
-
     private func saveProfile() {
-        guard let profile = settings.saveEqualizerProfile(named: profileName, settings: settings.equalizerDraft(for: .xm5SixValue)) else { return }
-        profileName = ""
-        apply(profile.settings)
+        guard let specification,
+              let profile = settings.saveEqualizerProfile(named: profileName, settings: settings.equalizerDraft(for: specification.id)) else { return }
+        profileName = ""; apply(profile.settings)
     }
-
-    private func signed(_ value: Int) -> String {
-        value > 0 ? "+\(value)" : "\(value)"
-    }
+    private func signed(_ value: Int) -> String { value > 0 ? "+\(value)" : "\(value)" }
 }
 
 private struct EqualizerCurve: Shape {
     let values: [Int]
-
+    let gainLimit: Int
     func path(in rect: CGRect) -> Path {
-        let points = (0..<5).map { index -> CGPoint in
-            let x = rect.minX + rect.width * CGFloat(index) / 4
-            let value = CGFloat(index < values.count ? values[index] : 0)
-            let y = rect.midY - value / 10 * rect.height / 2
-            return CGPoint(x: x, y: y)
+        guard values.count > 1 else { return Path() }
+        let points = values.indices.map { index in
+            CGPoint(x: rect.minX + rect.width * CGFloat(index) / CGFloat(values.count - 1),
+                    y: rect.midY - CGFloat(values[index]) / CGFloat(max(1, gainLimit)) * rect.height / 2)
         }
         var path = Path()
-        guard let first = points.first else { return path }
-        path.move(to: first)
+        path.move(to: points[0])
         for index in 1..<points.count {
-            let previous = points[index - 1]
-            let current = points[index]
-            let midpoint = (previous.x + current.x) / 2
-            path.addCurve(
-                to: current,
-                control1: CGPoint(x: midpoint, y: previous.y),
-                control2: CGPoint(x: midpoint, y: current.y)
-            )
+            let previous = points[index - 1], current = points[index], midpoint = (previous.x + current.x) / 2
+            path.addCurve(to: current, control1: CGPoint(x: midpoint, y: previous.y), control2: CGPoint(x: midpoint, y: current.y))
         }
         return path
     }

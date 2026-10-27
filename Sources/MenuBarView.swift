@@ -373,7 +373,15 @@ struct MenuBarView: View {
                 .environmentObject(settings)
                 .preferredColorScheme(.dark)
         }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier(screen == .dashboard ? "headphones.dashboard" : "settings.inline")
+    }
+
+    private var headphoneArtwork: Image {
+        if headphones.model == .whXM5 || headphones.model == .wfXM5 || headphones.model == .legacyXM5 {
+            return Image("XM5Hero")
+        }
+        return Image(systemName: "headphones")
     }
 
     private var dashboard: some View {
@@ -418,7 +426,7 @@ struct MenuBarView: View {
     private var connectionPanel: some View {
         VStack(spacing: 0) {
             header
-            Image("XM5Hero")
+            headphoneArtwork
                 .resizable()
                 .scaledToFit()
                 .frame(height: 128)
@@ -469,6 +477,10 @@ struct MenuBarView: View {
                     .font(.system(size: 12))
                     .foregroundStyle(XM5Palette.ink)
                     .padding(.vertical, 6)
+                    Button("Edit saved equalizer…") { showingEqualizerEditor = true }
+                        .buttonStyle(.plain)
+                        .font(.system(size: 12))
+                        .disabled(isConnecting)
                     if let seconds = headphones.retrySecondsRemaining {
                         Text("Retrying in \(seconds)s")
                             .font(.system(size: 11))
@@ -520,7 +532,7 @@ struct MenuBarView: View {
                 .offset(x: 184, y: 27)
                 .accessibilityHidden(true)
 
-            Image("XM5Hero")
+            headphoneArtwork
                 .resizable()
                 .scaledToFit()
                 .frame(width: 165, height: 156)
@@ -622,9 +634,9 @@ struct MenuBarView: View {
                 showsProgress: headphones.isApplyingChange
             )
             HStack(spacing: 9) {
-                modeButton(.off)
-                modeButton(.anc)
-                modeButton(.ambient)
+                ForEach(NoiseControlMode.allCases.filter { headphones.capabilities?.supportedModes.contains($0) == true }) { mode in
+                    modeButton(mode)
+                }
             }
             .padding(.horizontal, 8)
         }
@@ -633,7 +645,10 @@ struct MenuBarView: View {
     private var presetSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
-                ForEach(ListeningPreset.allCases) { preset in
+                ForEach(ListeningPreset.allCases.filter { preset in
+                    guard let capabilities = headphones.capabilities, capabilities.supportedModes.contains(preset.mode) else { return false }
+                    return preset == .focus || (capabilities.ambientRange?.contains(preset.level) == true && (!preset.focusOnVoice || capabilities.supportsFocusOnVoice))
+                }) { preset in
                     SceneButton(preset: preset, selected: isPresetSelected(preset)) {
                         headphones.applyPreset(
                             mode: preset.mode,
@@ -651,63 +666,57 @@ struct MenuBarView: View {
     }
 
     private var equalizerRow: some View {
-        HStack(spacing: 9) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Equalizer")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(XM5Palette.ink)
-            }
-            Spacer()
-            Menu {
-                ForEach(EqualizerPreset.selectableCases) { preset in
-                    Button {
-                        headphones.setEqualizerPreset(preset)
-                    } label: {
-                        if headphones.equalizerPreset == preset {
-                            Label(preset.title, systemImage: "checkmark")
-                        } else {
-                            Text(preset.title)
-                        }
-                    }
-                }
-                if !settings.compatibleEqualizerProfiles(for: .xm5SixValue).isEmpty {
-                    Divider()
-                    Menu("Mac Presets") {
-                        ForEach(settings.compatibleEqualizerProfiles(for: .xm5SixValue)) { profile in
-                            Button(profile.name) {
-                                settings.setEqualizerDraft(profile.settings)
-                                headphones.setCustomEqualizer(profile.settings)
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 9) {
+                Text("Equalizer").font(.system(size: 12, weight: .medium)).foregroundStyle(XM5Palette.ink)
+                Spacer()
+                Menu {
+                    if let specification = headphones.equalizerSpecification {
+                        ForEach(specification.presets.filter { $0.rawValue != 0xA0 }) { preset in
+                            Button { headphones.setEqualizerPreset(preset) } label: {
+                                if headphones.equalizerPreset == preset { Label(preset.title, systemImage: "checkmark") }
+                                else { Text(preset.title) }
                             }
                         }
+                        let profiles = settings.compatibleEqualizerProfiles(for: specification.id)
+                        if !profiles.isEmpty {
+                            Divider()
+                            Menu("Mac Presets") {
+                                ForEach(profiles) { profile in
+                                    Button(profile.name) {
+                                        settings.setEqualizerDraft(profile.settings)
+                                        headphones.setCustomEqualizer(profile.settings)
+                                    }
+                                }
+                            }
+                        }
+                        Divider()
+                        Button("Custom Equalizer…") { showingEqualizerEditor = true }
                     }
+                } label: {
+                    HStack(spacing: 6) {
+                        Text(headphones.equalizerPreset?.title ?? "Unavailable").lineLimit(1)
+                        Image(systemName: "chevron.up.chevron.down").font(.system(size: 8, weight: .bold))
+                    }.font(.system(size: 12, weight: .medium)).foregroundStyle(XM5Palette.accent)
                 }
-                Divider()
-                Button("Custom Equalizer…") { showingEqualizerEditor = true }
-            } label: {
-                HStack(spacing: 6) {
-                    Text(headphones.equalizerPreset?.title ?? "Unavailable")
-                        .lineLimit(1)
-                    Image(systemName: "chevron.up.chevron.down")
-                        .font(.system(size: 8, weight: .bold))
-                }
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(XM5Palette.accent)
+                .menuStyle(.borderlessButton).fixedSize()
+                .disabled(!headphones.isReady || headphones.equalizerSpecification == nil)
+                .help(headphones.equalizerUnavailableReason ?? "Choose a Sony equalizer preset")
+                .accessibilityLabel("Equalizer preset")
+                .accessibilityIdentifier("equalizer.preset")
+            }.frame(height: 44)
+            if let reason = headphones.equalizerUnavailableReason {
+                Text(reason).font(.system(size: 10)).foregroundStyle(XM5Palette.muted)
+                    .fixedSize(horizontal: false, vertical: true).padding(.bottom, 8)
             }
-            .menuStyle(.borderlessButton)
-            .fixedSize()
-            .disabled(!headphones.isReady)
-            .help("Choose a Sony equalizer preset")
-            .accessibilityIdentifier("equalizer.preset")
-        }
-        .padding(.horizontal, 14)
-        .frame(height: 44)
-        .background(XM5Palette.soft, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(XM5Palette.line, lineWidth: 0.75))
+        }.padding(.horizontal, 14)
+            .background(XM5Palette.soft, in: RoundedRectangle(cornerRadius: 10))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(XM5Palette.line, lineWidth: 0.75))
     }
 
     private var modeDetailPanel: some View {
         ZStack {
-            if headphones.noiseControlMode == .ambient {
+            if headphones.noiseControlMode == .ambient && headphones.capabilities?.ambientRange != nil {
                 ambientControls
             } else {
                 PassiveNoiseField(mode: headphones.noiseControlMode)
@@ -722,7 +731,7 @@ struct MenuBarView: View {
                 Text("Ambient sound")
                     .font(.system(size: 12, weight: .medium))
                 Spacer()
-                Text("\(headphones.ambientLevel)")
+                Text("\(headphones.displayedAmbientLevel)")
                     .font(.system(size: 12))
                     .foregroundStyle(XM5Palette.muted)
                 Text("/ 20")
@@ -730,7 +739,7 @@ struct MenuBarView: View {
                     .foregroundStyle(XM5Palette.muted)
             }
 
-            AmbientLevelTrack(level: headphones.ambientLevel) {
+            AmbientLevelTrack(level: headphones.displayedAmbientLevel) {
                 headphones.setAmbientLevel($0)
             }
             .padding(.top, 14)
@@ -749,7 +758,7 @@ struct MenuBarView: View {
                 Toggle(
                     "",
                     isOn: Binding(
-                        get: { headphones.focusOnVoice },
+                        get: { headphones.displayedFocusOnVoice },
                         set: { headphones.setFocusOnVoice($0) }
                     )
                 )
@@ -793,12 +802,15 @@ struct MenuBarView: View {
                 .font(.system(size: 10))
                 .foregroundStyle(XM5Palette.accent)
                 .fixedSize(horizontal: false, vertical: true)
+        } else if let message = headphones.lastErrorMessage {
+            Text(message).font(.system(size: 10)).foregroundStyle(XM5Palette.accent)
+                .fixedSize(horizontal: false, vertical: true)
         } else if !headphones.isDeviceConnected {
             VStack(alignment: .leading, spacing: 10) {
                 Label("Power on the headphones, then connect them here.", systemImage: "antenna.radiowaves.left.and.right.slash")
                     .font(.system(size: 10))
                     .foregroundStyle(XM5Palette.muted)
-                Button("Connect WH-1000XM5") { headphones.connect() }
+                Button("Connect headphones") { headphones.connect() }
                     .buttonStyle(.borderedProminent)
                     .tint(XM5Palette.accent)
                     .foregroundStyle(XM5Palette.canvas)
@@ -814,7 +826,7 @@ struct MenuBarView: View {
         return ListeningModeButton(
             mode: mode,
             selected: selected,
-            enabled: headphones.isReady
+            enabled: headphones.isReady && headphones.capabilities?.supportedModes.contains(mode) == true
         ) {
             headphones.setNoiseControl(mode)
         }
@@ -977,7 +989,9 @@ struct MenuBarView: View {
                 settingsDivider
                 diagnosticRow("Control link", headphones.statusText)
                 settingsDivider
-                diagnosticRow("Protocol", headphones.controlChannelID.map { "MDR v2 · RFCOMM \($0)" } ?? "MDR v2")
+                diagnosticRow("Protocol", headphones.protocolDescription)
+                settingsDivider
+                diagnosticRow("Capabilities", headphones.capabilityDescription)
                 settingsDivider
                 diagnosticRow("Firmware", headphones.firmwareVersion ?? "Unknown")
                 settingsDivider
@@ -1093,9 +1107,9 @@ struct MenuBarView: View {
         case .focus:
             return true
         case .office:
-            return headphones.ambientLevel == preset.level && headphones.focusOnVoice
+            return headphones.displayedAmbientLevel == preset.level && headphones.displayedFocusOnVoice
         case .aware:
-            return headphones.ambientLevel == preset.level && !headphones.focusOnVoice
+            return headphones.displayedAmbientLevel == preset.level && !headphones.displayedFocusOnVoice
         }
     }
 }
