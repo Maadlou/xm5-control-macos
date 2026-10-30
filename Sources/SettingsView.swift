@@ -34,6 +34,7 @@ struct SettingsView: View {
                 LabeledContent("Bluetooth audio", value: headphones.isDeviceConnected ? "Connected" : "Disconnected")
                 LabeledContent("Control link", value: headphones.statusText)
                 LabeledContent("Protocol", value: diagnosticsProtocol)
+                LabeledContent("Capabilities", value: headphones.capabilityDescription)
                 LabeledContent("Firmware", value: headphones.firmwareVersion ?? "Unknown")
                 LabeledContent("Last sync", value: lastSyncText)
                 if let error = headphones.lastErrorMessage {
@@ -63,7 +64,7 @@ struct SettingsView: View {
     }
 
     private var diagnosticsProtocol: String {
-        headphones.controlChannelID.map { "MDR v2 · RFCOMM \($0)" } ?? "MDR v2"
+        headphones.protocolDescription
     }
 
     private var lastSyncText: String {
