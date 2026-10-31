@@ -126,7 +126,7 @@ function Navbar() {
           GitHub
         </a>
         <a
-          href="https://github.com/Maadlou/xm5-control-macos/releases/download/v0.1.0/XM5-Control-0.1.0.dmg"
+          href="https://github.com/Maadlou/xm5-control-macos/releases/download/v0.2.0/XM5-Control-0.2.0.dmg"
           style={{
             fontSize: 12.5,
             fontWeight: 600,
@@ -217,7 +217,7 @@ function Hero() {
           </p>
           <div style={{ display: 'flex', gap: 11, flexWrap: 'wrap' }}>
           <a
-            href="https://github.com/Maadlou/xm5-control-macos/releases/download/v0.1.0/XM5-Control-0.1.0.dmg"
+            href="https://github.com/Maadlou/xm5-control-macos/releases/download/v0.2.0/XM5-Control-0.2.0.dmg"
             id="download"
             style={{
               display: 'inline-flex',
@@ -483,7 +483,7 @@ function Footer() {
           Now your Mac does too.
         </p>
         <a
-          href="https://github.com/Maadlou/xm5-control-macos/releases/download/v0.1.0/XM5-Control-0.1.0.dmg"
+          href="https://github.com/Maadlou/xm5-control-macos/releases/download/v0.2.0/XM5-Control-0.2.0.dmg"
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -505,10 +505,10 @@ function Footer() {
           Download XM5 Control
         </a>
         <div style={{ marginTop: 18, fontSize: 11.5, color: '#3a3733', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-          Free · XM5 release · macOS 14+
+          Free · XM5 & XM6 · macOS 14+
         </div>
         <p style={{ margin: '12px 0 0', fontSize: 12, lineHeight: 1.5, color: '#8a8480' }}>
-          Open source. Built because I needed it myself. WH-1000XM6 support is in development and awaiting hardware verification; the v0.1.0 download remains the XM5 release.
+          Open source. Built because I needed it myself. Now supports both WH-1000XM5 and WH-1000XM6.
         </p>
       </div>
 
@@ -536,7 +536,7 @@ function Footer() {
         </p>
         <div style={{ display: 'flex', gap: 20 }}>
           <a href="https://github.com/Maadlou/xm5-control-macos" target="_blank" rel="noreferrer" style={{ fontSize: 12, color: '#3a3733', textDecoration: 'none' }}>GitHub</a>
-          <a href="https://github.com/Maadlou/xm5-control-macos/releases/download/v0.1.0/XM5-Control-0.1.0.dmg" style={{ fontSize: 12, color: '#3a3733', textDecoration: 'none' }}>Download</a>
+          <a href="https://github.com/Maadlou/xm5-control-macos/releases/download/v0.2.0/XM5-Control-0.2.0.dmg" style={{ fontSize: 12, color: '#3a3733', textDecoration: 'none' }}>Download</a>
         </div>
       </div>
     </footer>
